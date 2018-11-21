@@ -5,8 +5,8 @@
 #       during scatter over samples.
 #     - developed by Malaria Group, IDMP, Broad Institute.
 #
-# import 'https://api.firecloud.org/ga4gh/v1/tools/broad-fungal-methods:haplotypecaller_gatk3-scatter_intervals/versions/4/plain-WDL/descriptor' as HaplotypeCaller */ */
-import '../gatk3_haplotype_caller/haplotypecaller_gatk3-scatter_intervals.wdl' as HaplotypeCaller
+import 'https://api.firecloud.org/ga4gh/v1/tools/broad-fungal-methods:haplotypecaller_gatk3-scatter_intervals/versions/1/plain-WDL/descriptor' as HaplotypeCaller
+# import '../gatk3_haplotype_caller/haplotypecaller_gatk3-scatter_intervals.wdl' as HaplotypeCaller
 
 ## WORKFLOW DEFINITION
 workflow GATK3_Germline_Variants {

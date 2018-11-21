@@ -11,6 +11,6 @@ It contains analysis pipelines for:
 Each separate analysis components are available as docker images. Workflow description language is used for the command execution. Pipelines are also available on FireCloud.
 
 ## About
-This repo is developed by Xiao Li from IDMP, the Broad Institute. The software is under MIT license. To contribute, please refer to the contribution guidelines. Use `issues` tag to report any bugs.
+This repo is developed by Xiao Li from IDMP, the Broad Institute. To contribute, please refer to the contribution guidelines. Use `issues` tag to report any bugs.
 
 This software is under MIT license.
