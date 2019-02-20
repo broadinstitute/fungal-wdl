@@ -48,28 +48,9 @@ workflow GATK3_Germline_Variants {
     # align?
     Boolean do_align
 
-    # for base quality score recalibration
-    Boolean do_bqsr
-    Array[File] known_sites
-    Array[File] known_sites_indices
-    Array[String] bqsr_intervals_to_exclude
-
     # variant quality control param
     # either "vqsr" or "hard_filtering"
     String variant_qc
-
-    # vqsr params
-    # if variant_qc == "vqsr"
-    # all of these params are required
-    Float ts_filter_snp
-    Float ts_filter_indel
-    Int snp_max_gaussians
-    Int indel_max_gaussians
-    Int vqsr_mapping_qual_cap
-    Array[String] snp_resources
-    Array[String] indel_resources
-    Array[String] snp_annotations
-    Array[String] indel_annotations
 
     # hard filtering params
     # if variant_qc == "hard_filtering"
@@ -153,34 +134,10 @@ workflow GATK3_Germline_Variants {
             disk_size = disk_size
         }
 
-        if (do_bqsr) {
-            # base quality score recalibration
-            call BQSR {
-                input:
-                ref = ref,
-                ref_dict = ref_dict,
-                ref_index = ref_index,
-                bam = ReorderBam.out,
-                bam_index = ReorderBam.out_index,
-                sample_name = sample_name,
-                known_sites = known_sites,
-                known_sites_indices = known_sites_indices,
-                intervals_to_exclude = bqsr_intervals_to_exclude,
-                output_table_name = sample_name + ".bqsr.table",
-                output_bam_name = sample_name + ".bsqr.bam",
-                gitc_docker = gitc_docker,
-                gatk_path = gitc_path_to_gatk,
-                picard_path = gitc_path_to_picard,
-                mem_size_gb = large_mem_size_gb,
-                disk_size = disk_size
-            }
-        }
-
         call HaplotypeCaller {
             input:
-            input_bam = select_first([BQSR.out, ReorderBam.out]),
-            input_bam_index = select_first([BQSR.out_index,
-                                            ReorderBam.out_index]),
+            input_bam = ReorderBam.out,
+            input_bam_index = ReorderBam.out_index,
 
             gvcf_name = "${sample_name}.g.vcf",
             gvcf_index = "${sample_name}.g.vcf.idx",
