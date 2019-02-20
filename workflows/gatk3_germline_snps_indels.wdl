@@ -5,8 +5,7 @@
 #       during scatter over samples.
 #     - developed by Malaria Group, IDMP, Broad Institute.
 #
-import 'https://api.firecloud.org/ga4gh/v1/tools/broad-fungal-methods:haplotypecaller_gatk3-scatter_intervals/versions/1/plain-WDL/descriptor' as HaplotypeCaller
-# import '../gatk3_haplotype_caller/haplotypecaller_gatk3-scatter_intervals.wdl' as HaplotypeCaller
+
 
 ## WORKFLOW DEFINITION
 workflow GATK3_Germline_Variants {
@@ -86,7 +85,6 @@ workflow GATK3_Germline_Variants {
     ## task calls
     # run pipeline on each sample, in parallel
     scatter(sample in read_tsv(sample_paths_file)) {
-
         String sample_name = sample[0]
 
         if ((length(sample) == 2) && do_align) {
@@ -177,131 +175,63 @@ workflow GATK3_Germline_Variants {
                 disk_size = disk_size
             }
         }
-        # to do: targetcreator
-        # to do: indel realignment
 
-        # call subworkflow
-        call HaplotypeCaller.HaplotypeCallerGvcf_GATK3 {
+        call HaplotypeCaller {
             input:
+            input_bam = select_first([BQSR.out, ReorderBam.out]),
+            input_bam_index = select_first([BQSR.out_index,
+                                            ReorderBam.out_index]),
+
+            gvcf_name = "${sample_name}.g.vcf",
+            gvcf_index = "${sample_name}.g.vcf.idx",
+
             ref_fasta = ref,
             ref_dict = ref_dict,
             ref_fasta_index = ref_index,
-            input_bam = select_first([BQSR.out, ReorderBam.out]),
-            input_bam_index = select_first([BQSR.out_index, ReorderBam.out_index]),
-            scattered_calling_intervals_list = interval_files_list,
-            merge_gvcfs_mem_size_gb = large_mem_size_gb,
-            haplotypecaller_mem_size_gb = med_mem_size_gb,
-            merge_gvcfs_disk_size = med_disk_size,
-            haplotypecaller_disk_size = med_disk_size,
+
+            mem_size_gb = med_mem_size_gb,
+            disk_size = med_disk_size,
+
             gatk_docker = gatk_docker,
-            gatk_path = gatk_path_to_gatk,
-            picard_docker = gitc_docker,
-            picard_path = gitc_path_to_picard
-        }
-    } # end scatter
-
-    scatter (interval in read_lines(interval_list)) {
-        call CombineGVCFs {
-            input:
-            ref = ref,
-            ref_dict = ref_dict,
-            ref_index = ref_index,
-            interval = interval,
-            vcf_files = HaplotypeCallerGvcf_GATK3.output_gvcf,
-            vcf_index_files = HaplotypeCallerGvcf_GATK3.output_gvcf_index,
-            gatk4_docker = gatk4_docker,
-            gatk4_path = gatk4_path_to_gatk,
-            mem_size_gb = med_mem_size_gb,
-            disk_size = disk_size
-        }
-
-        call GenotypeGVCFs {
-            input:
-            ref = ref,
-            ref_dict = ref_dict,
-            ref_index = ref_index,
-            interval = interval,
-            vcf_file = CombineGVCFs.out,
-            vcf_index_file = CombineGVCFs.out_index,
-            gatk4_docker = gatk4_docker,
-            gatk4_path = gatk4_path_to_gatk,
-            mem_size_gb = med_mem_size_gb,
-            disk_size = disk_size
+            gatk_path = gatk_path_to_gatk
         }
     }
 
-    call GatherVCFs {
+    call CombineGVCFs {
         input:
-        vcf_files = GenotypeGVCFs.out,
-        gitc_docker = gitc_docker,
-        picard_path_gitc = gitc_path_to_picard,
-        tabix_path_gitc = "/usr/gitc/tabix",
-        mem_size_gb = extra_large_mem_size_gb,
-        disk_size = large_disk_size
+        ref = ref,
+        ref_dict = ref_dict,
+        ref_index = ref_index,
+        interval = interval,
+        vcf_files = HaplotypeCaller.output_gvcf,
+        vcf_index_files = HaplotypeCaller.output_gvcf_index,
+        gatk4_docker = gatk4_docker,
+        gatk4_path = gatk4_path_to_gatk,
+        mem_size_gb = med_mem_size_gb,
+        disk_size = disk_size
     }
 
-    # variant quality control
-    if (variant_qc == "vqsr") {
-        # variant quality score recalibration
-        # snp vqsr
-        call VQSR as SnpVQSR {
-            input:
-            ref = ref,
-            ref_dict = ref_dict,
-            ref_index = ref_index,
-            gvcf = GatherVCFs.out,
-            gvcf_index = GatherVCFs.out_index,
-            output_filename = "${run_name}.snp_vqsr.g.vcf.gz",
-            output_index_filename = "${run_name}.snp_vqsr.g.vcf.gz.tbi",
-
-            mode = "SNP",
-            resources = snp_resources,
-            resource_files = known_sites,
-            resource_file_indices = known_sites_indices,
-            annotations = snp_annotations,
-            ts_filter = ts_filter_snp,
-            max_gaussians = snp_max_gaussians,
-            mapping_qual_cap = vqsr_mapping_qual_cap,
-
-            gatk4_docker = gatk4_docker,
-            gatk4_path = gatk4_path_to_gatk,
-            mem_size_gb = med_mem_size_gb,
-            disk_size = disk_size
-        }
-        # indel vqsr
-        call VQSR as IndelVQSR {
-            input:
-            ref = ref,
-            ref_dict = ref_dict,
-            ref_index = ref_index,
-            gvcf = SnpVQSR.out,
-            gvcf_index = SnpVQSR.out_index,
-            output_filename = "${run_name}.indel_vqsr.g.vcf.gz",
-            output_index_filename = "${run_name}.indel_vqsr.g.vcf.gz.tbi",
-
-            mode = "INDEL",
-            resources = indel_resources,
-            resource_files = known_sites,
-            resource_file_indices = known_sites_indices,
-            annotations = indel_annotations,
-            ts_filter = ts_filter_indel,
-            max_gaussians = indel_max_gaussians,
-            mapping_qual_cap = vqsr_mapping_qual_cap,
-
-            gatk4_docker = gatk4_docker,
-            gatk4_path = gatk4_path_to_gatk,
-            mem_size_gb = med_mem_size_gb,
-            disk_size = disk_size
-        }
+    call GenotypeGVCFs {
+        input:
+        ref = ref,
+        ref_dict = ref_dict,
+        ref_index = ref_index,
+        vcf_file = CombineGVCFs.out,
+        vcf_index_file = CombineGVCFs.out_index,
+        gatk4_docker = gatk4_docker,
+        gatk4_path = gatk4_path_to_gatk,
+        mem_size_gb = med_mem_size_gb,
+        disk_size = disk_size
     }
+
     if (variant_qc == "hard_filtering") {
         call HardFiltration {
             input:
             ref = ref,
             ref_dict = ref_dict,
             ref_index = ref_index,
-            vcf = GatherVCFs.out,
-            vcf_index = GatherVCFs.out_index,
+            vcf = GenotypeGVCFs.output_vcf_name,
+            vcf_index = GenotypeGVCFs.output_vcf_index_name,
             snp_filter_expr = snp_filter_expr,
             indel_filter_expr = indel_filter_expr,
             output_filename = "${run_name}.hard_filtered.g.vcf.gz",
@@ -311,22 +241,22 @@ workflow GATK3_Germline_Variants {
             disk_size = extra_large_disk_size
         }
     }
+
     # to do: genotype filtering step
-    # add variant annotations using SnpEff
     if (do_snpeff) {
         call SnpEff {
             input:
             ref = ref,
             organism_gff = organism_gff,
             output_vcf_name = "${run_name}.snpeff.g.vcf",
-            vcf = select_first([IndelVQSR.out, HardFiltration.out]),
+            vcf = HardFiltration.out,
             mem_size_gb = extra_large_mem_size_gb,
             disk_size = extra_large_disk_size
         }
     }
 
     output {
-        File gvcf = select_first([SnpEff.out, IndelVQSR.out, HardFiltration.out])
+        File gvcf = select_first([SnpEff.out, HardFiltration.out])
     }
 }
 
@@ -482,7 +412,7 @@ task MarkDuplicates {
     }
 
     runtime {
-    	preemptible: 3
+        preemptible: 3
         docker: picard_docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
@@ -521,7 +451,7 @@ task ReorderBam {
     }
 
     runtime {
-    	preemptible: 3
+        preemptible: 3
         docker: picard_docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
@@ -596,7 +526,7 @@ CODE
     }
 
     runtime {
-    	preemptible: 3
+        preemptible: 3
         docker: gitc_docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
@@ -648,7 +578,6 @@ task GenotypeGVCFs {
     File ref
     File ref_dict
     File ref_index
-    String interval
     File vcf_file
     File vcf_index_file
     String gcvf_out = "genotyped_gvcfs.vcf.gz"
@@ -664,137 +593,25 @@ task GenotypeGVCFs {
         ${gatk4_path} --java-options "-Xmx${cmd_mem_size_gb}G" \
             GenotypeGVCFs \
             -R ${ref} \
-            -L ${interval} \
             -O ${gcvf_out} \
             --variant ${vcf_file} \
-            --only-output-calls-starting-in-intervals \
-            --use-new-qual-calculator
     }
     output {
-       File out = gcvf_out
-    }
-
-    runtime {
-    	preemptible: 4
-        docker: gatk4_docker
-        memory: mem_size_gb + " GB"
-        disks: "local-disk " + disk_size + " HDD"
-    }
-}
-
-task GatherVCFs {
-    Array[File] vcf_files
-
-    Int disk_size
-    Int mem_size_gb
-    String gitc_docker
-    String picard_path_gitc
-    String tabix_path_gitc
-
-    String output_vcf_name = "gathered.vcf.gz"
-    String output_vcf_index_name = "gathered.vcf.gz.tbi"
-    Int cmd_mem_size_gb = mem_size_gb - 1
-    #File vcf_file_list = write_lines(vcf_files)
-
-    command {
-        java "-Xmx${cmd_mem_size_gb}G" -jar ${picard_path_gitc} \
-            GatherVcfs \
-            I=${sep=" I=" vcf_files} \
-            O=${output_vcf_name}
-
-        ${tabix_path_gitc} -p vcf ${output_vcf_name}
-    }
-    output {
-        File out = output_vcf_name
-        File out_index = output_vcf_index_name
+       String output_vcf_name = "genotyped_gvcfs.vcf.gz"
+       String output_vcf_index_name = "genotyped_gvcfs.vcf.gz.tbi"
     }
 
     runtime {
         preemptible: 4
-        docker: gitc_docker
-        memory: mem_size_gb + " GB"
-        disks: "local-disk " + disk_size + " HDD"
-    }
-}
-
-# variant quality score recalibration
-# https://software.broadinstitute.org/gatk/documentation/article.php?id=2805
-task VQSR {
-    File ref
-    File ref_dict
-    File ref_index
-    File gvcf
-    File gvcf_index
-    String output_filename
-    String output_index_filename
-
-    String mode
-    Float ts_filter
-    Array[String] resources
-    Array[String] annotations
-    Array[File] resource_files
-    Array[File] resource_file_indices
-
-    Int max_gaussians
-    Int mapping_qual_cap
-
-    Int disk_size
-    Int mem_size_gb
-    String gatk4_docker
-    String gatk4_path
-
-    Int cmd_mem_size_gb = mem_size_gb - 1
-
-    String vqsr_file = "${mode}.recal"
-    String rscript_file = "${mode}.plots.R"
-    String tranches_file = "${mode}.tranches"
-
-    command {
-        # build vqsr file
-        ${gatk4_path} --java-options "-Xmx${cmd_mem_size_gb}G" \
-            VariantRecalibrator \
-            -R ${ref} \
-            -V ${gvcf} \
-            -mode ${mode} \
-            -O ${vqsr_file} \
-            --tranches-file ${tranches_file} \
-            --rscript-file ${rscript_file} \
-            --resource ${sep=" --resource " resources} \
-            -an ${sep=" -an " annotations} \
-            --max-gaussians ${max_gaussians} \
-            -mq-cap ${mapping_qual_cap}
-
-        # apply vqsr
-        ${gatk4_path} --java-options "-Xmx${cmd_mem_size_gb}G" \
-            ApplyVQSR \
-            -R ${ref} \
-            -V ${gvcf} \
-            --truth-sensitivity-filter-level ${ts_filter} \
-            --tranches-file ${tranches_file} \
-            --recal-file ${vqsr_file} \
-            -mode ${mode} \
-            -O ${output_filename}
-    }
-
-    output {
-        File vqsr = vqsr_file
-        File rscript = rscript_file
-        File tranches = tranches_file
-        File out = output_filename
-        File out_index = output_index_filename
-    }
-
-    runtime {
-    	preemptible: 3
         docker: gatk4_docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
     }
 }
 
-# hard-filter a vcf, if vqsr not available
-# http://gatkforums.broadinstitute.org/gatk/discussion/2806/howto-apply-hard-filters-to-a-call-set
 task HardFiltration {
+    # hard-filter a vcf, if vqsr not available
+    # http://gatkforums.broadinstitute.org/gatk/discussion/2806/howto-apply-hard-filters-to-a-call-set
     File ref
     File vcf
     File vcf_index
@@ -862,16 +679,91 @@ task HardFiltration {
     }
 
     runtime {
-    	preemptible: 3
+        preemptible: 3
         docker: gatk_docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
     }
 }
 
-# annotate variants
-# Based on http://gatkforums.broadinstitute.org/gatk/discussion/50/adding-genomic-annotations-using-snpeff-and-variantannotator
+
+task HaplotypeCaller {
+  File input_bam
+  File input_bam_index
+
+  String gvcf_name
+  String gvcf_index
+
+  File ref_dict
+  File ref_fasta
+  File ref_fasta_index
+  String sample_name
+
+  Int disk_size
+  Int mem_size_gb
+  Int cmd_mem_size_gb = mem_size_gb - 1
+
+  String gatk_docker
+  String gatk_path
+
+  #File index
+  String ? intervals
+  File ? bqsr_file
+  Int ? ploidy
+  String ? erc
+  String ? extra_hc_params
+  String out = "${sample_name}.g.vcf"
+
+  command {
+    java -Xmx${cmd_mem_size_gb}G -jar ${gatk_path} \
+      -T HaplotypeCaller \
+      -R ${ref_fasta} \
+      -I ${input_bam} \
+      -o ${gvcf_name} \
+      ${"--intervals " + intervals} \
+      ${"-BQSR " + bqsr_file} \
+      -ERC ${default="GVCF" erc} \
+      -ploidy ${default="1" ploidy} \
+      --interval_padding 100 \
+      -variant_index_type LINEAR \
+      -variant_index_parameter 128000 \
+      ${default="\n" extra_hc_params} \
+      --read_filter OverclippedRead
+  }
+
+  output {
+      #To track additional outputs from your task, please manually add them below
+      File output_gvcf = "${gvcf_name}"
+      File output_gvcf_index = "${gvcf_index}"
+  }
+
+  runtime {
+    task_name: "HaplotypeCaller"
+    preemptible: 3
+    docker: gatk_docker
+    memory: mem_size_gb + " GB"
+    disks: "local-disk " + disk_size + " HDD"
+  }
+
+  parameter_meta {
+      gatk: "Executable jar for the GenomeAnalysisTK"
+      ref: "fasta file of reference genome"
+      sample_name: "The name of the sample as indicated by the 1st column of the gatk.samples_file json input."
+      sample_dir: "The sample-specific directory inside output_dir for each sample."
+      in_bam: "The bam file to call HaplotypeCaller on."
+      intervals: "An array of intervals to restrict processing to."
+      bqsr_file: "The full path to the BQSR file."
+      erc: "Mode for emitting reference confidence scores."
+      extra_hc_params: "A parameter that allows users to pass any additional paramters to the task."
+      out: "VCF file produced by haplotype caller."
+  }
+}
+
+
 task SnpEff {
+    # annotate variants
+    # Based on http://gatkforums.broadinstitute.org/gatk/discussion/50/adding-genomic-annotations-using-snpeff-and-variantannotator
+
     File vcf
     File ref
     File organism_gff
