@@ -1,7 +1,7 @@
 #
 #  gatk3_germline_snps_indels.wdl:
 #     - standardized pipeline for calling germline SNPs and INDELs.
-#     - imports haplotypecaller subworkflow to scatter SNP/INDEL calls over intervals,
+#     - imports haplotypecaller subworkflow to scatter SNP/INDEL calls
 #       during scatter over samples.
 #     - developed by Malaria Group, IDMP, Broad Institute.
 #
@@ -11,6 +11,8 @@
 workflow GATK3_Germline_Variants {
     ## config params
     # input data
+    String run_name
+
     File ref                   # path to reference file
     File ref_sa
     File ref_bwt
@@ -19,16 +21,14 @@ workflow GATK3_Germline_Variants {
     File ref_pac
     File ref_dict
     File ref_index
-    String run_name
     File sample_paths_file     # .tsv of (sample_name, sample_sam_path)
-    File interval_files_list   # intervals files to be scattered over during HC
-    File interval_list         # all intervals
 
     # mem size/ disk size params
     Int small_mem_size_gb
     Int med_mem_size_gb
     Int large_mem_size_gb
     Int extra_large_mem_size_gb
+
     Int disk_size
     Int med_disk_size
     Int large_disk_size
@@ -37,8 +37,10 @@ workflow GATK3_Germline_Variants {
     # gatk/ picard/ genomes-in-the-cloud
     String gatk_docker         # gatk3 docker (e.g. broadinstitute/gatk3:3.8-0)
     String gatk_path_to_gatk
+
     String gatk4_docker
     String gatk4_path_to_gatk
+
     String gitc_docker         # genomes-in-the-cloud (gitc) docker
     String gitc_path_to_picard
     String gitc_path_to_gatk
@@ -48,13 +50,7 @@ workflow GATK3_Germline_Variants {
     # align?
     Boolean do_align
 
-    # variant quality control param
-    # either "vqsr" or "hard_filtering"
-    String variant_qc
-
-    # hard filtering params
-    # if variant_qc == "hard_filtering"
-    # both of these params are required
+    # hard filtering params: both of these params are required
     String snp_filter_expr
     String indel_filter_expr
 
@@ -159,7 +155,6 @@ workflow GATK3_Germline_Variants {
         ref = ref,
         ref_dict = ref_dict,
         ref_index = ref_index,
-        interval = interval,
         vcf_files = HaplotypeCaller.output_gvcf,
         vcf_index_files = HaplotypeCaller.output_gvcf_index,
         gatk4_docker = gatk4_docker,
@@ -181,22 +176,20 @@ workflow GATK3_Germline_Variants {
         disk_size = disk_size
     }
 
-    if (variant_qc == "hard_filtering") {
-        call HardFiltration {
-            input:
-            ref = ref,
-            ref_dict = ref_dict,
-            ref_index = ref_index,
-            vcf = GenotypeGVCFs.output_vcf_name,
-            vcf_index = GenotypeGVCFs.output_vcf_index_name,
-            snp_filter_expr = snp_filter_expr,
-            indel_filter_expr = indel_filter_expr,
-            output_filename = "${run_name}.hard_filtered.g.vcf.gz",
-            gatk_docker = gatk_docker,
-            gatk_path = gatk_path_to_gatk,
-            mem_size_gb = extra_large_mem_size_gb,
-            disk_size = extra_large_disk_size
-        }
+    call HardFiltration {
+        input:
+        ref = ref,
+        ref_dict = ref_dict,
+        ref_index = ref_index,
+        vcf = GenotypeGVCFs.output_vcf_name,
+        vcf_index = GenotypeGVCFs.output_vcf_index_name,
+        snp_filter_expr = snp_filter_expr,
+        indel_filter_expr = indel_filter_expr,
+        output_filename = "${run_name}.hard_filtered.g.vcf.gz",
+        gatk_docker = gatk_docker,
+        gatk_path = gatk_path_to_gatk,
+        mem_size_gb = extra_large_mem_size_gb,
+        disk_size = extra_large_disk_size
     }
 
     # to do: genotype filtering step
@@ -285,6 +278,7 @@ task AlignBwaMem {
     }
 }
 
+
 task AlignBwaMemR1R2 {
     File ref
     File ref_sa
@@ -345,6 +339,7 @@ task AlignBwaMemR1R2 {
     }
 }
 
+
 # mark duplicate reads in bam
 task MarkDuplicates {
     File sorted_bam
@@ -358,7 +353,7 @@ task MarkDuplicates {
     Int cmd_mem_size_gb = mem_size_gb - 1
 
     command {
-        java -Xmx${cmd_mem_size_gb}G -jar ${picard_path} MarkDuplicates \
+        java -Xmx${mem_size_gb}G -jar ${picard_path} MarkDuplicates \
             I=${sorted_bam} \
             O=${sample_name}.marked_duplicates.bam \
             M=${sample_name}.marked_duplicates.metrics
@@ -375,6 +370,7 @@ task MarkDuplicates {
         disks: "local-disk " + disk_size + " HDD"
     }
 }
+
 
 # reorder and index a bam
 task ReorderBam {
@@ -415,91 +411,16 @@ task ReorderBam {
     }
 }
 
-# base quality score recalibration
-task BQSR {
-    File ref
-    File ref_dict
-    File ref_index
-    File bam
-    File bam_index
-    String sample_name
-    String output_table_name
-    String output_bam_name
-    Array[File] known_sites
-    Array[File] known_sites_indices
-    Array[String] intervals_to_exclude
-
-    Int disk_size
-    Int mem_size_gb
-    String gitc_docker
-    String gatk_path
-    String picard_path
-
-    Int cmd_mem_size_gb = mem_size_gb - 1
-    Array[String] prefixed_intervals_to_exclude = prefix("--excludeIntervals ", intervals_to_exclude)
-
-    command {
-        # build BQSR table
-        java -Xmx${cmd_mem_size_gb}G -jar ${gatk_path} -T BaseRecalibrator -nt 1 \
-            -R ${ref} -I ${bam} \
-            -knownSites ${sep=" -knownSites " known_sites} \
-            -o ${output_table_name} \
-            ${sep=" " prefixed_intervals_to_exclude}
-
-        # install GATK AnalyzeCovariates R dependencies
-R --vanilla << CODE
-install.packages("gplots", repos="http://cran.us.r-project.org")
-install.packages("gsalib", repos="http://cran.us.r-project.org")
-install.packages("reshape", repos="http://cran.us.r-project.org")
-CODE
-
-        # AnalyzeCovariates
-        java -jar ${gatk_path} \
-            -T AnalyzeCovariates \
-            -R ${ref} \
-            --BQSR ${output_table_name} \
-            -plots ${sample_name}.bqsr.pdf
-
-        # clean reads, using bqsr if applicable
-        java -Xmx${cmd_mem_size_gb}G -jar ${gatk_path} \
-            -T PrintReads \
-            -nt 1 \
-            -R ${ref} \
-            -I ${bam} \
-            --BQSR ${output_table_name} \
-            -o ${output_bam_name}
-
-        # build index
-        java -Xmx${cmd_mem_size_gb}G -jar ${picard_path} \
-            BuildBamIndex \
-            I=${output_bam_name} \
-            O=${output_bam_name}.bai
-    }
-
-    output {
-        File out = "${output_bam_name}"
-        File out_index = "${output_bam_name}.bai"
-        File table = "${output_table_name}"
-    }
-
-    runtime {
-        preemptible: 3
-        docker: gitc_docker
-        memory: mem_size_gb + " GB"
-        disks: "local-disk " + disk_size + " HDD"
-    }
-}
 
 # merge vcfs before genotyping
 task CombineGVCFs {
     File ref
     File ref_dict
     File ref_index
-    String interval
     Array[File] vcf_files
     Array[File] vcf_index_files
 
-    String gcvf_out = "combined_gvcfs.vcf.gz"
+    String gvcf_out = "combined_gvcfs.vcf.gz"
     String gvcf_out_index = "combined_gvcfs.vcf.gz.tbi"
 
     Int disk_size
@@ -513,12 +434,11 @@ task CombineGVCFs {
         ${gatk4_path} --java-options "-Xmx${cmd_mem_size_gb}G" \
             CombineGVCFs \
             -R ${ref} \
-            -L ${interval} \
-            -O ${gcvf_out} \
+            -O ${gvcf_out} \
             --variant ${sep=" --variant " vcf_files}
     }
     output {
-       File out = gcvf_out
+       File out = gvcf_out
        File out_index = gvcf_out_index
     }
 
@@ -530,6 +450,7 @@ task CombineGVCFs {
     }
 }
 
+
 # genotype gvcfs
 task GenotypeGVCFs {
     File ref
@@ -537,7 +458,7 @@ task GenotypeGVCFs {
     File ref_index
     File vcf_file
     File vcf_index_file
-    String gcvf_out = "genotyped_gvcfs.vcf.gz"
+    String gvcf_out = "genotyped_gvcfs.vcf.gz"
 
     Int disk_size
     Int mem_size_gb
@@ -550,12 +471,12 @@ task GenotypeGVCFs {
         ${gatk4_path} --java-options "-Xmx${cmd_mem_size_gb}G" \
             GenotypeGVCFs \
             -R ${ref} \
-            -O ${gcvf_out} \
+            -O ${gvcf_out} \
             --variant ${vcf_file} \
     }
     output {
-       String output_vcf_name = "genotyped_gvcfs.vcf.gz"
-       String output_vcf_index_name = "genotyped_gvcfs.vcf.gz.tbi"
+        File output_vcf_name = gvcf_out
+        File output_vcf_index_name = "${gvcf_out}.tbi"
     }
 
     runtime {
@@ -565,6 +486,7 @@ task GenotypeGVCFs {
         disks: "local-disk " + disk_size + " HDD"
     }
 }
+
 
 task HardFiltration {
     # hard-filter a vcf, if vqsr not available
@@ -663,12 +585,6 @@ task HaplotypeCaller {
   String gatk_docker
   String gatk_path
 
-  #File index
-  String ? intervals
-  File ? bqsr_file
-  Int ? ploidy
-  String ? erc
-  String ? extra_hc_params
   String out = "${sample_name}.g.vcf"
 
   command {
@@ -677,14 +593,10 @@ task HaplotypeCaller {
       -R ${ref_fasta} \
       -I ${input_bam} \
       -o ${gvcf_name} \
-      ${"--intervals " + intervals} \
-      ${"-BQSR " + bqsr_file} \
-      -ERC ${default="GVCF" erc} \
-      -ploidy ${default="1" ploidy} \
-      --interval_padding 100 \
+      -ERC "GVCF" \
+      -ploidy 1 \
       -variant_index_type LINEAR \
       -variant_index_parameter 128000 \
-      ${default="\n" extra_hc_params} \
       --read_filter OverclippedRead
   }
 
@@ -708,10 +620,6 @@ task HaplotypeCaller {
       sample_name: "The name of the sample as indicated by the 1st column of the gatk.samples_file json input."
       sample_dir: "The sample-specific directory inside output_dir for each sample."
       in_bam: "The bam file to call HaplotypeCaller on."
-      intervals: "An array of intervals to restrict processing to."
-      bqsr_file: "The full path to the BQSR file."
-      erc: "Mode for emitting reference confidence scores."
-      extra_hc_params: "A parameter that allows users to pass any additional paramters to the task."
       out: "VCF file produced by haplotype caller."
   }
 }
@@ -720,7 +628,6 @@ task HaplotypeCaller {
 task SnpEff {
     # annotate variants
     # Based on http://gatkforums.broadinstitute.org/gatk/discussion/50/adding-genomic-annotations-using-snpeff-and-variantannotator
-
     File vcf
     File ref
     File organism_gff
