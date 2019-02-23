@@ -1,0 +1,7 @@
+cromwell*
+tests/data/candida*
+tests/data/interval*
+*bam
+*bam.bai
+*gz
+.DS_Store
