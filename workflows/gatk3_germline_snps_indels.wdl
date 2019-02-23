@@ -1,3 +1,4 @@
+# docker file for funpipe
 #
 #  gatk3_germline_snps_indels.wdl:
 #     - standardized pipeline for calling germline SNPs and INDELs.
@@ -34,18 +35,10 @@ workflow GATK3_Germline_Variants {
     Int large_disk_size
     Int extra_large_disk_size
 
-    # gatk/ picard/ genomes-in-the-cloud
-    String gatk_docker         # gatk3 docker (e.g. broadinstitute/gatk3:3.8-0)
-    String gatk_path_to_gatk
+    String docker
 
-    String gatk4_docker
-    String gatk4_path_to_gatk
-
-    String gitc_docker         # genomes-in-the-cloud (gitc) docker
-    String gitc_path_to_picard
-    String gitc_path_to_gatk
-    String gitc_path_to_bwa
-    String gitc_path_to_samtools
+    String picard_path
+    String gatk_path
 
     # align?
     Boolean do_align
@@ -65,129 +58,173 @@ workflow GATK3_Germline_Variants {
         String sample_name = sample[0]
 
         if ((length(sample) == 2) && do_align) {
-            call AlignBwaMem {
+            call SamToFastq {
                 input:
-                ref = ref,
-                ref_sa = ref_sa,
-                ref_bwt = ref_bwt,
-                ref_amb = ref_amb,
-                ref_ann = ref_ann,
-                ref_pac = ref_pac,
-                ref_dict = ref_dict,
-                ref_index = ref_index,
+                in_bam = sample[1],
                 sample_name = sample_name,
-                bam_or_fastq = sample[1],
-                gitc_docker = gitc_docker,
-                samtools_path_gitc = gitc_path_to_samtools,
-                picard_path_gitc = gitc_path_to_picard,
-                bwa_path_gitc = gitc_path_to_bwa,
+                disk_size = large_disk_size,
                 mem_size_gb = small_mem_size_gb,
-                disk_size = large_disk_size
+                docker = docker,
+                picard_path = picard_path
+            }
+
+            call AlignAndSortBAM {
+                input:
+                sample_name = sample_name,
+                fq1 = SamToFastq.fq1,
+                fq2 = SamToFastq.fq2,
+
+                ref = ref,
+                sa = ref_sa,
+                bwt = ref_bwt,
+                amb = ref_amb,
+                ann = ref_ann,
+                pac = ref_pac,
+                dict = ref_dict,
+                fai = ref_index,
+
+                docker = docker,
+                mem_size_gb = small_mem_size_gb,
+                disk_size = large_disk_size,
+                picard_path = picard_path
             }
         }
 
-        if (length(sample) == 3){
-            call AlignBwaMemR1R2 {
-                input:
-                ref = ref,
-                ref_sa = ref_sa,
-                ref_bwt = ref_bwt,
-                ref_amb = ref_amb,
-                ref_ann = ref_ann,
-                ref_pac = ref_pac,
-                ref_dict = ref_dict,
-                ref_index = ref_index,
-                sample_name = sample_name,
-                fastq_R1 = sample[1],
-                fastq_R2 = sample[2],
-                gitc_docker = gitc_docker,
-                samtools_path_gitc = gitc_path_to_samtools,
-                picard_path_gitc = gitc_path_to_picard,
-                bwa_path_gitc = gitc_path_to_bwa,
-                mem_size_gb = small_mem_size_gb,
-                disk_size = large_disk_size
-            }
-        }
 
         call MarkDuplicates {
             input:
             sample_name = sample_name,
-            sorted_bam = select_first([AlignBwaMem.aligned_bam, AlignBwaMemR1R2.aligned_bam, sample[1]]),
-            picard_docker = gitc_docker,
-            picard_path = gitc_path_to_picard,
+            sorted_bam = select_first([
+                AlignAndSortBAM.bam,
+                sample[1]]),
+
+            docker = docker,
+            picard_path = picard_path,
             mem_size_gb = small_mem_size_gb,
             disk_size = disk_size
         }
 
         call ReorderBam {
             input:
+            bam = MarkDuplicates.bam,
+
             ref = ref,
             dict = ref_dict,
-            bam = MarkDuplicates.bam,
-            picard_docker = gitc_docker,
-            picard_path = gitc_path_to_picard,
+
+            docker = docker,
+            picard_path = picard_path,
             mem_size_gb = med_mem_size_gb,
             disk_size = disk_size
         }
 
+        call RealignerTargetCreator {
+            input:
+            sample_name = sample_name,
+            in_bam = ReorderBam.out,
+            in_bam_index = ReorderBam.out_index,
+
+            ref = ref,
+            dict = ref_dict,
+            amb = ref_amb,
+            sa = ref_sa,
+            ann = ref_ann,
+            bwt = ref_bwt,
+            fai = ref_index,
+            pac = ref_pac,
+
+            gatk_path = gatk_path,
+            docker = docker,
+            mem_size_gb = med_mem_size_gb,
+            disk_size = med_disk_size
+        }
+
+        call IndelRealigner {
+            input:
+            in_bam = ReorderBam.out,
+            in_bam_index = ReorderBam.out_index,
+            sample_name = sample_name,
+            intervals = RealignerTargetCreator.intervals,
+
+            ref = ref,
+            dict = ref_dict,
+            amb = ref_amb,
+            sa = ref_sa,
+            ann = ref_ann,
+            bwt = ref_bwt,
+            fai = ref_index,
+            pac = ref_pac,
+
+            gatk_path = gatk_path,
+            mem_size_gb = med_mem_size_gb,
+            docker = docker,
+            disk_size = med_disk_size
+
+        }
+
         call HaplotypeCaller {
             input:
-            input_bam = ReorderBam.out,
-            input_bam_index = ReorderBam.out_index,
+            input_bam = IndelRealigner.bam,
+            input_bam_index = IndelRealigner.index,
 
             gvcf_name = "${sample_name}.g.vcf",
             gvcf_index = "${sample_name}.g.vcf.idx",
 
-            ref_fasta = ref,
+            ref = ref,
             ref_dict = ref_dict,
-            ref_fasta_index = ref_index,
+            ref_index = ref_index,
 
             mem_size_gb = med_mem_size_gb,
             disk_size = med_disk_size,
-
-            gatk_docker = gatk_docker,
-            gatk_path = gatk_path_to_gatk
+            docker = docker,
+            gatk_path = gatk_path
         }
     }
 
     call CombineGVCFs {
         input:
+        vcf_files = HaplotypeCaller.output_gvcf,
+        vcf_index_files = HaplotypeCaller.output_gvcf_index,
+
         ref = ref,
         ref_dict = ref_dict,
         ref_index = ref_index,
-        vcf_files = HaplotypeCaller.output_gvcf,
-        vcf_index_files = HaplotypeCaller.output_gvcf_index,
-        gatk4_docker = gatk4_docker,
-        gatk4_path = gatk4_path_to_gatk,
+
+        docker = docker,
+        gatk_path = gatk_path,
         mem_size_gb = med_mem_size_gb,
         disk_size = disk_size
     }
 
     call GenotypeGVCFs {
         input:
+        vcf_file = CombineGVCFs.out,
+        vcf_index_file = CombineGVCFs.out_index,
+
         ref = ref,
         ref_dict = ref_dict,
         ref_index = ref_index,
-        vcf_file = CombineGVCFs.out,
-        vcf_index_file = CombineGVCFs.out_index,
-        gatk4_docker = gatk4_docker,
-        gatk4_path = gatk4_path_to_gatk,
+
+        docker = docker,
+        gatk_path = gatk_path,
         mem_size_gb = med_mem_size_gb,
         disk_size = disk_size
     }
 
     call HardFiltration {
         input:
-        ref = ref,
-        ref_dict = ref_dict,
-        ref_index = ref_index,
         vcf = GenotypeGVCFs.output_vcf_name,
         vcf_index = GenotypeGVCFs.output_vcf_index_name,
         snp_filter_expr = snp_filter_expr,
         indel_filter_expr = indel_filter_expr,
-        output_filename = "${run_name}.hard_filtered.g.vcf.gz",
-        gatk_docker = gatk_docker,
-        gatk_path = gatk_path_to_gatk,
+
+        ref = ref,
+        ref_dict = ref_dict,
+        ref_index = ref_index,
+
+        output_filename = "${run_name}.hard_filtered.vcf.gz",
+
+        docker = docker,
+        gatk_path = gatk_path,
         mem_size_gb = extra_large_mem_size_gb,
         disk_size = extra_large_disk_size
     }
@@ -198,8 +235,9 @@ workflow GATK3_Germline_Variants {
             input:
             ref = ref,
             organism_gff = organism_gff,
-            output_vcf_name = "${run_name}.snpeff.g.vcf",
+            output_vcf_name = "${run_name}.snpeff.vcf.gz",
             vcf = HardFiltration.out,
+
             mem_size_gb = extra_large_mem_size_gb,
             disk_size = extra_large_disk_size
         }
@@ -212,130 +250,88 @@ workflow GATK3_Germline_Variants {
 
 
 ## TASK DEFINITIONS
-task AlignBwaMem {
-    File ref
-    File ref_sa
-    File ref_bwt
-    File ref_amb
-    File ref_ann
-    File ref_pac
-    File ref_dict
-    File ref_index
-
-    File bam_or_fastq
+task SamToFastq {
+    File in_bam
     String sample_name
 
     Int disk_size
     Int mem_size_gb
-    String gitc_docker
-    String bwa_path_gitc
-    String picard_path_gitc
-    String samtools_path_gitc
+    String docker
+    String picard_path
 
-    String d = "$"
-
-    command <<<
-        if [[ ${bam_or_fastq} = *".bam" ]] ; then
-            # bam to fastq
-            ${samtools_path_gitc} fastq ${bam_or_fastq} > ${sample_name}.fastq
-            # bwa mem
-            ${bwa_path_gitc} mem -M -R "$(${samtools_path_gitc} view -H ${bam_or_fastq} | grep @RG | sed 's/\t/\\t/g')" -p ${ref} ${sample_name}.fastq > ${sample_name}.sam
-            # sam2bam, sort and index
-            ${samtools_path_gitc} view ${sample_name}.sam -bS > ${sample_name}.bam
-        else
-            # bwa mem
-            ${bwa_path_gitc} mem -M -p ${ref} ${bam_or_fastq} > ${sample_name}.sam
-            # add read group
-            if [[ ${bam_or_fastq} = *".gz" ]] ; then
-                IFS=':' read -r -a read_group_data <<< "$(zcat ${bam_or_fastq} | head -n 1)"
-            else
-                IFS=':' read -r -a read_group_data <<< "$(cat ${bam_or_fastq} | head -n 1)"
-            fi
-            IFS=" " read_group_data=(${d}{read_group_data[@]})
-            java -jar ${picard_path_gitc} AddOrReplaceReadGroups \
-                I=${sample_name}.sam \
-                O=${sample_name}.bam \
-                RGID=${d}{read_group_data[0]:1}.${d}{read_group_data[1]} \
-                RGPU=${d}{read_group_data[2]}.${d}{read_group_data[3]} \
-                RGLB=${sample_name} \
-                RGSM=${sample_name} \
-                RGPL=ILLUMINA
-        fi
-        ${samtools_path_gitc} sort -o ${sample_name}.sorted.bam ${sample_name}.bam
-        ${samtools_path_gitc} index ${sample_name}.sorted.bam
-    >>>
-
+    String out_fq1 = "${sample_name}.1.fq"
+    String out_fq2 = "${sample_name}.2.fq"
+    command {
+        java -Xmx${mem_size_gb}G -jar ${picard_path} SamToFastq INPUT=${in_bam} FASTQ=${out_fq1} SECOND_END_FASTQ=${out_fq2} VALIDATION_STRINGENCY=LENIENT
+    }
     output {
-        File aligned_bam = "${sample_name}.sorted.bam"
-        File aligned_bam_index = "${sample_name}.sorted.bam.bai"
+        String done = "Done"
+        File fq1 = out_fq1
+        File fq2 = out_fq2
     }
 
     runtime {
-        preemptible: 5
-        docker: gitc_docker
+        preemptible: 3
+        docker: docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
+    }
+
+    parameter_meta {
+        picard: "The absolute path to the picard jar to execute."
+        in_bam: "The bam file to convert to fastq."
+        sample_dir: "The sample-specific directory inside output_dir for each sample."
+        sample_name: "The name of the sample as indicated by the 1st column of the gatk.samples_file json input."
+        out_fq1: "The fastq file containing the first read of each pair."
+        out_fq2: "The fastq file containing the second read of each pair"
     }
 }
 
 
-task AlignBwaMemR1R2 {
-    File ref
-    File ref_sa
-    File ref_bwt
-    File ref_amb
-    File ref_ann
-    File ref_pac
-    File ref_dict
-    File ref_index
-
-    File fastq_R1
-    File fastq_R2
+task AlignAndSortBAM {
     String sample_name
+
+    File fq1
+    File fq2
+
+    File ref
+    File dict
+    File amb
+    File ann
+    File bwt
+    File fai
+    File pac
+    File sa
 
     Int disk_size
     Int mem_size_gb
-    String gitc_docker
-    String bwa_path_gitc
-    String samtools_path_gitc
-    String picard_path_gitc
+    String docker
+    String picard_path
 
-    String d = "$"
-
-    command <<<
-        # bwa mem
-        ${bwa_path_gitc} mem -M ${ref} ${fastq_R1} ${fastq_R2} > ${sample_name}.sam
-        # add read groups, convert to bam
-        fastq_file=${fastq_R1}
-        if [ "${d}{fastq_file##*.}" == "gz" ] ; then
-            IFS=':' read -r -a read_group_data <<< "$(zcat ${fastq_R1} | head -n 1)"
-        else
-            IFS=':' read -r -a read_group_data <<< "$(cat ${fastq_R1} | head -n 1)"
-        fi
-        IFS=" " read_group_data=(${d}{read_group_data[@]})
-        java -jar ${picard_path_gitc} AddOrReplaceReadGroups \
-            I=${sample_name}.sam \
-            O=${sample_name}.bam \
-            RGID=${d}{read_group_data[0]:1}.${d}{read_group_data[1]} \
-            RGPU=${d}{read_group_data[2]}.${d}{read_group_data[3]} \
-            RGLB=${sample_name} \
-            RGSM=${sample_name} \
-            RGPL=ILLUMINA
-        # sort and index
-        ${samtools_path_gitc} sort -o ${sample_name}.sorted.bam ${sample_name}.bam
-        ${samtools_path_gitc} index ${sample_name}.sorted.bam
-    >>>
+    String read_group = "'@RG\\tID:FLOWCELL_${sample_name}\\tSM:${sample_name}\\tPL:ILLUMINA\\tLB:LIB_${sample_name}'"
+    command {
+        bwa mem -R ${read_group} ${ref} ${fq1} ${fq2} | samtools view -bS -> ${sample_name}.aligned.bam
+        java -Xmx${mem_size_gb}G -jar ${picard_path} SortSam I=${sample_name}.aligned.bam O=${sample_name}.sorted.bam SO=coordinate
+    }
 
     output {
-        File aligned_bam = "${sample_name}.sorted.bam"
-        File aligned_bam_index = "${sample_name}.sorted.bam.bai"
+        File bam = "${sample_name}.sorted.bam"
     }
 
     runtime {
+        task_name: "AlignBAM"
         preemptible: 5
-        docker: gitc_docker
+        docker: docker
         memory: mem_size_gb + " GB"
-        disks: "local-disk " + disk_size + " HDD"
+        disks: "local-disk "+ disk_size + " HDD"
+    }
+
+    parameter_meta {
+        ref: "fasta file of reference genome"
+        sample_dir: "The sample-specific directory inside output_dir for each sample."
+        sample_name: "The name of the sample as indicated by the 1st column of the gatk.samples_file json input."
+        fq_array: "An array containing the paths to the first and second fastq files."
+        read_group: "The read group string that will be included in the bam header."
     }
 }
 
@@ -347,7 +343,7 @@ task MarkDuplicates {
 
     Int disk_size
     Int mem_size_gb
-    String picard_docker
+    String docker
     String picard_path
 
     Int cmd_mem_size_gb = mem_size_gb - 1
@@ -365,7 +361,7 @@ task MarkDuplicates {
 
     runtime {
         preemptible: 3
-        docker: picard_docker
+        docker: docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
     }
@@ -381,7 +377,7 @@ task ReorderBam {
 
     Int disk_size
     Int mem_size_gb
-    String picard_docker
+    String docker
     String picard_path
 
     Int cmd_mem_size_gb = mem_size_gb - 1
@@ -405,7 +401,7 @@ task ReorderBam {
 
     runtime {
         preemptible: 3
-        docker: picard_docker
+        docker: docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
     }
@@ -425,16 +421,16 @@ task CombineGVCFs {
 
     Int disk_size
     Int mem_size_gb
-    String gatk4_docker
-    String gatk4_path
+    String docker
+    String gatk_path
 
     Int cmd_mem_size_gb = mem_size_gb - 1
 
     command {
-        ${gatk4_path} --java-options "-Xmx${cmd_mem_size_gb}G" \
-            CombineGVCFs \
+        java -Xmx${cmd_mem_size_gb}G -jar ${gatk_path} \
+            -T CombineGVCFs \
             -R ${ref} \
-            -O ${gvcf_out} \
+            -o ${gvcf_out} \
             --variant ${sep=" --variant " vcf_files}
     }
     output {
@@ -444,7 +440,7 @@ task CombineGVCFs {
 
     runtime {
         preemptible: 4
-        docker: gatk4_docker
+        docker:docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
     }
@@ -462,16 +458,16 @@ task GenotypeGVCFs {
 
     Int disk_size
     Int mem_size_gb
-    String gatk4_docker
-    String gatk4_path
+    String docker
+    String gatk_path
 
     Int cmd_mem_size_gb = mem_size_gb - 1
 
     command {
-        ${gatk4_path} --java-options "-Xmx${cmd_mem_size_gb}G" \
-            GenotypeGVCFs \
+        java -Xmx${cmd_mem_size_gb}G -jar ${gatk_path} \
+            -T GenotypeGVCFs \
             -R ${ref} \
-            -O ${gvcf_out} \
+            -o ${gvcf_out} \
             --variant ${vcf_file} \
     }
     output {
@@ -481,7 +477,7 @@ task GenotypeGVCFs {
 
     runtime {
         preemptible: 4
-        docker: gatk4_docker
+        docker: docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
     }
@@ -503,7 +499,7 @@ task HardFiltration {
 
     Int disk_size
     Int mem_size_gb
-    String gatk_docker
+    String docker
     String gatk_path
 
     Int cmd_mem_size_gb = mem_size_gb - 1
@@ -559,7 +555,7 @@ task HardFiltration {
 
     runtime {
         preemptible: 3
-        docker: gatk_docker
+        docker:docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
     }
@@ -574,15 +570,15 @@ task HaplotypeCaller {
   String gvcf_index
 
   File ref_dict
-  File ref_fasta
-  File ref_fasta_index
+  File ref
+  File ref_index
   String sample_name
 
   Int disk_size
   Int mem_size_gb
   Int cmd_mem_size_gb = mem_size_gb - 1
 
-  String gatk_docker
+  String docker
   String gatk_path
 
   String out = "${sample_name}.g.vcf"
@@ -590,7 +586,7 @@ task HaplotypeCaller {
   command {
     java -Xmx${cmd_mem_size_gb}G -jar ${gatk_path} \
       -T HaplotypeCaller \
-      -R ${ref_fasta} \
+      -R ${ref} \
       -I ${input_bam} \
       -o ${gvcf_name} \
       -ERC "GVCF" \
@@ -609,7 +605,7 @@ task HaplotypeCaller {
   runtime {
     task_name: "HaplotypeCaller"
     preemptible: 3
-    docker: gatk_docker
+    docker: docker
     memory: mem_size_gb + " GB"
     disks: "local-disk " + disk_size + " HDD"
   }
@@ -637,7 +633,7 @@ task SnpEff {
     Int disk_size
     Int mem_size_gb
     String snpeff_path = "/opt/snpEff/snpEff.jar"
-    String snpeff_docker = "maxulysse/snpeff:1.3"
+    String docker = "maxulysse/snpeff:1.3"
     String organism_db_dir = "/opt/snpEff/data/" + organism_name + "/"
     String snpeff_config_path = "/opt/snpEff/snpEff.config"
 
@@ -671,8 +667,100 @@ task SnpEff {
 
     runtime {
         preemptible: 3
-        docker: snpeff_docker
+        docker: docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
+    }
+}
+
+
+task RealignerTargetCreator {
+    String gatk_path
+    String docker
+    Int mem_size_gb
+    Int disk_size
+
+    File ref
+    File dict
+    File amb
+    File ann
+    File bwt
+    File fai
+    File pac
+    File sa
+
+    File in_bam
+    File in_bam_index
+
+    String sample_name
+    String out = "${sample_name}.interval_list"
+    command {
+        source /broad/software/scripts/useuse
+        java -Xmx${mem_size_gb}G -jar ${gatk_path} -T RealignerTargetCreator -R ${ref} -I ${in_bam} -o ${out}
+    }
+    output {
+        File intervals = out
+    }
+    runtime {
+        preemptible: 5
+        memory: mem_size_gb
+        docker: docker
+        disks: "local-disk " + disk_size + " HDD"
+    }
+    parameter_meta {
+        gatk: "The absolute path to the gatk executable jar."
+        ref: "fasta file of reference genome"
+        in_bam: "The input bam for the gatk task"
+        out: "The intervals list to be used by IndelRealigner"
+    }
+}
+
+
+task IndelRealigner {
+    String gatk_path
+    String docker
+    Int mem_size_gb
+    Int disk_size
+
+    File ref
+    File dict
+    File amb
+    File ann
+    File bwt
+    File fai
+    File pac
+    File sa
+
+    File in_bam
+    File in_bam_index
+    File intervals
+    String sample_name
+    String out = "${sample_name}.indels_realigned.bam"
+
+
+    command {
+        source /broad/software/scripts/useuse
+        use Java-1.8
+        use Samtools
+        samtools index ${in_bam}
+        java -Xmx${mem_size_gb}G -jar ${gatk_path} -T IndelRealigner -R ${ref} -I ${in_bam} -targetIntervals ${intervals} -o ${out}
+        samtools index ${out}
+    }
+    output {
+        File bam = "${sample_name}.indels_realigned.bam"
+        File index = "${sample_name}.indels_realigned.bam.bai"
+    }
+    runtime {
+        preemptible: 5
+        memory: mem_size_gb
+        docker: docker
+        disks: "local-disk " + disk_size + " HDD"
+    }
+    parameter_meta {
+        gatk: "The absolute path to the gatk executable jar."
+        ref: "fasta file of reference genome"
+        in_bam: "The input bam for the gatk task"
+        intervals: "The intervals list to be used by IndelRealigner"
+        out: "the bam including realigned indels."
     }
 }
