@@ -165,6 +165,7 @@ workflow GATK3_Germline_Variants {
             input:
             input_bam = IndelRealigner.bam,
             input_bam_index = IndelRealigner.index,
+            sample_name = sample_name,
 
             gvcf_name = "${sample_name}.g.vcf",
             gvcf_index = "${sample_name}.g.vcf.idx",
