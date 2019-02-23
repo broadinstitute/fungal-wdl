@@ -1,6 +1,6 @@
 {
     "GATK3_Germline_Variants.run_name": "cauris",
-    "GATK3_Germline_Variants.sample_paths_file": "tests/data/sample_path_file.tsv",
+    "GATK3_Germline_Variants.sample_paths_file": "tests/data/test_path_file.tsv",
     "GATK3_Germline_Variants.HaplotypeCaller.sample_name": "test",
 
     "GATK3_Germline_Variants.med_disk_size": "20",
