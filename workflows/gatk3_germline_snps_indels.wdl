@@ -696,7 +696,6 @@ task RealignerTargetCreator {
     String sample_name
     String out = "${sample_name}.interval_list"
     command {
-        source /broad/software/scripts/useuse
         java -Xmx${mem_size_gb}G -jar ${gatk_path} -T RealignerTargetCreator -R ${ref} -I ${in_bam} -o ${out}
     }
     output {
@@ -740,9 +739,6 @@ task IndelRealigner {
 
 
     command {
-        source /broad/software/scripts/useuse
-        use Java-1.8
-        use Samtools
         samtools index ${in_bam}
         java -Xmx${mem_size_gb}G -jar ${gatk_path} -T IndelRealigner -R ${ref} -I ${in_bam} -targetIntervals ${intervals} -o ${out}
         samtools index ${out}
