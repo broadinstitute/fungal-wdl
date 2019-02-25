@@ -117,54 +117,10 @@ workflow GATK3_Germline_Variants {
             disk_size = disk_size
         }
 
-        call RealignerTargetCreator {
-            input:
-            sample_name = sample_name,
-            in_bam = ReorderBam.out,
-            in_bam_index = ReorderBam.out_index,
-
-            ref = ref,
-            dict = ref_dict,
-            amb = ref_amb,
-            sa = ref_sa,
-            ann = ref_ann,
-            bwt = ref_bwt,
-            fai = ref_index,
-            pac = ref_pac,
-
-            gatk_path = gatk_path,
-            docker = docker,
-            mem_size_gb = med_mem_size_gb,
-            disk_size = med_disk_size
-        }
-
-        call IndelRealigner {
-            input:
-            in_bam = ReorderBam.out,
-            in_bam_index = ReorderBam.out_index,
-            sample_name = sample_name,
-            intervals = RealignerTargetCreator.intervals,
-
-            ref = ref,
-            dict = ref_dict,
-            amb = ref_amb,
-            sa = ref_sa,
-            ann = ref_ann,
-            bwt = ref_bwt,
-            fai = ref_index,
-            pac = ref_pac,
-
-            gatk_path = gatk_path,
-            mem_size_gb = med_mem_size_gb,
-            docker = docker,
-            disk_size = med_disk_size
-
-        }
-
         call HaplotypeCaller {
             input:
-            input_bam = IndelRealigner.bam,
-            input_bam_index = IndelRealigner.index,
+            input_bam = ReorderBam.out,
+            input_bam_index = ReorderBam.out_index,
             sample_name = sample_name,
 
             gvcf_name = "${sample_name}.g.vcf",
@@ -671,93 +627,5 @@ task SnpEff {
         docker: docker
         memory: mem_size_gb + " GB"
         disks: "local-disk " + disk_size + " HDD"
-    }
-}
-
-
-task RealignerTargetCreator {
-    String gatk_path
-    String docker
-    Int mem_size_gb
-    Int disk_size
-
-    File ref
-    File dict
-    File amb
-    File ann
-    File bwt
-    File fai
-    File pac
-    File sa
-
-    File in_bam
-    File in_bam_index
-
-    String sample_name
-    String out = "${sample_name}.interval_list"
-    command {
-        java -Xmx${mem_size_gb}G -jar ${gatk_path} -T RealignerTargetCreator -R ${ref} -I ${in_bam} -o ${out}
-    }
-    output {
-        File intervals = out
-    }
-    runtime {
-        preemptible: 5
-        memory: mem_size_gb
-        docker: docker
-        disks: "local-disk " + disk_size + " HDD"
-    }
-    parameter_meta {
-        gatk: "The absolute path to the gatk executable jar."
-        ref: "fasta file of reference genome"
-        in_bam: "The input bam for the gatk task"
-        out: "The intervals list to be used by IndelRealigner"
-    }
-}
-
-
-task IndelRealigner {
-    String gatk_path
-    String docker
-    Int mem_size_gb
-    Int disk_size
-
-    File ref
-    File dict
-    File amb
-    File ann
-    File bwt
-    File fai
-    File pac
-    File sa
-
-    File in_bam
-    File in_bam_index
-    File intervals
-    String sample_name
-    String out = "${sample_name}.indels_realigned.bam"
-
-
-    command {
-        samtools index ${in_bam}
-        java -Xmx${mem_size_gb}G -jar ${gatk_path} -T IndelRealigner -R ${ref} -I ${in_bam} -targetIntervals ${intervals} -o ${out}
-        samtools index ${out}
-    }
-    output {
-        File bam = "${sample_name}.indels_realigned.bam"
-        File index = "${sample_name}.indels_realigned.bam.bai"
-    }
-    runtime {
-        preemptible: 5
-        memory: mem_size_gb
-        docker: docker
-        disks: "local-disk " + disk_size + " HDD"
-    }
-    parameter_meta {
-        gatk: "The absolute path to the gatk executable jar."
-        ref: "fasta file of reference genome"
-        in_bam: "The input bam for the gatk task"
-        intervals: "The intervals list to be used by IndelRealigner"
-        out: "the bam including realigned indels."
     }
 }
