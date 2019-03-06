@@ -22,7 +22,8 @@ workflow GATK3_Germline_Variants {
     File ref_pac
     File ref_dict
     File ref_index
-    File sample_paths_file     # .tsv of (sample_name, sample_sam_path)
+    Array[String] input_samples
+    Array[File] input_bams
 
     # mem size/ disk size params
     Int small_mem_size_gb
@@ -49,18 +50,19 @@ workflow GATK3_Germline_Variants {
 
     # snpeff
     File organism_gff
-    Boolean do_snpeff
+    Boolean do_snpeff = false
 
 
     ## task calls
     # run pipeline on each sample, in parallel
-    scatter(sample in read_tsv(sample_paths_file)) {
-        String sample_name = sample[0]
+    scatter(i in range(length(input_samples))) {
+        String sample_name = input_samples[i]
+        String input_bam = input_bams[i]
 
         if ((length(sample) == 2) && do_align) {
             call SamToFastq {
                 input:
-                in_bam = sample[1],
+                in_bam = input_bam,
                 sample_name = sample_name,
                 disk_size = large_disk_size,
                 mem_size_gb = small_mem_size_gb,
@@ -96,7 +98,7 @@ workflow GATK3_Germline_Variants {
             sample_name = sample_name,
             sorted_bam = select_first([
                 AlignAndSortBAM.bam,
-                sample[1]]),
+                input_bam]),
 
             docker = docker,
             picard_path = picard_path,
