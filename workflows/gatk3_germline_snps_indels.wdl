@@ -49,7 +49,7 @@ workflow GATK3_Germline_Variants {
 
     # snpeff
     File organism_gff
-    Boolean do_snpeff
+    Boolean do_snpeff = false
 
 
     ## task calls
