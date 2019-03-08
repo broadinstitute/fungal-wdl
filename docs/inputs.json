@@ -1,0 +1,33 @@
+{
+    "GATK3_Germline_Variants.input_samples":"${this.participants.participant_id}",
+    "GATK3_Germline_Variants.input_bams":"${this.participants.bam_file}",
+
+    "GATK3_Germline_Variants.do_align":true,
+    "GATK3_Germline_Variants.run_name":"benchmark",
+    "GATK3_Germline_Variants.indel_filter_expr":"QD < 2.0 || FS > 60.0 || MQ < 40.0",
+    "GATK3_Germline_Variants.snp_filter_expr":"QD < 2.0 || FS > 60.0 || MQ < 40.0",
+
+    "GATK3_Germline_Variants.ref":"${workspace.b8441_ref_fa}",
+    "GATK3_Germline_Variants.ref_ann":"${workspace.b8441_ref_ann}",
+    "GATK3_Germline_Variants.ref_index":"${workspace.b8441_ref_index}",
+    "GATK3_Germline_Variants.ref_amb":"${workspace.b8441_ref_amb}",
+    "GATK3_Germline_Variants.ref_sa":"${workspace.b8441_ref_sa}",
+    "GATK3_Germline_Variants.ref_bwt":"${workspace.b8441_ref_bwt}",
+    "GATK3_Germline_Variants.ref_dict":"${workspace.b8441_ref_dict}",
+    "GATK3_Germline_Variants.ref_pac":"${workspace.b8441_ref_pac}",
+
+    "GATK3_Germline_Variants.docker":"xiaoli2020/fungi-gatk3:v1.0",
+    "GATK3_Germline_Variants.picard_path":"/opt/picard.jar",
+    "GATK3_Germline_Variants.gatk_path":"/opt/GenomeAnalysisTK.jar",
+
+    "GATK3_Germline_Variants.small_mem_size_gb":15,
+    "GATK3_Germline_Variants.med_mem_size_gb":30,
+    "GATK3_Germline_Variants.large_mem_size_gb":60,
+    "GATK3_Germline_Variants.extra_large_mem_size_gb":60,
+
+    "GATK3_Germline_Variants.disk_size":120,
+    "GATK3_Germline_Variants.med_disk_size":250,
+    "GATK3_Germline_Variants.large_disk_size":500,
+    "GATK3_Germline_Variants.extra_large_disk_size":700
+
+}
