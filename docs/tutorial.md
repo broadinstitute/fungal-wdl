@@ -36,6 +36,14 @@ Click the `View` text, and you can see the details of your job.
 Click `show` tag to see more details, such as time graph and individual job status.
 
 <a href="https://imgur.com/YbzdUD9"><img src="https://i.imgur.com/YbzdUD9.png" title="source: imgur.com" /></a>
+
+6. Check finished job.
+When jobs are done, you can check the details on the same page.
+<a href="https://imgur.com/Vh0cSaA"><img src="https://i.imgur.com/Vh0cSaA.png" title="source: imgur.com" /></a>
+
+Click the show button, you will be able to see corresponding details, such as the time graph indicating the runtime of each individual task:
+<a href="https://imgur.com/x1Uxvru"><img src="https://i.imgur.com/x1Uxvru.png" title="source: imgur.com" /></a>
+
 To use your own reference and dataset, you will need to create a google bucket and upload files there, and update the JSON files accordingly. Read more [below](#REF).
 
 ## <a name="CUS">Customize your own workspace</a>
