@@ -1,14 +1,8 @@
-# docker file for funpipe
-#
-#  gatk3_germline_snps_indels.wdl:
-#     - standardized pipeline for calling germline SNPs and INDELs.
-#     - imports haplotypecaller subworkflow to scatter SNP/INDEL calls
-#       during scatter over samples.
-#     - developed by Malaria Group, IDMP, Broad Institute.
-#
+# Variant Calling pipeline for fungal haploid genomes
+# Developped by Xiao Li (xiaoli@broadinstitute.org) from Broad Fungal Genomics
+# Group, Infectious Disease and Microbiome Program.
 
 
-## WORKFLOW DEFINITION
 workflow GATK3_Germline_Variants {
     ## config params
     # input data
@@ -50,7 +44,6 @@ workflow GATK3_Germline_Variants {
 
     # snpeff
     File organism_gff
-    Boolean do_snpeff = false
 
 
     ## task calls
@@ -577,57 +570,4 @@ task HaplotypeCaller {
       in_bam: "The bam file to call HaplotypeCaller on."
       out: "VCF file produced by haplotype caller."
   }
-}
-
-
-task SnpEff {
-    # annotate variants
-    # Based on http://gatkforums.broadinstitute.org/gatk/discussion/50/adding-genomic-annotations-using-snpeff-and-variantannotator
-    File vcf
-    File ref
-    File organism_gff
-    String organism_name
-    String output_vcf_name
-
-    Int disk_size
-    Int mem_size_gb
-    String snpeff_path = "/opt/snpEff/snpEff.jar"
-    String docker = "maxulysse/snpeff:1.3"
-    String organism_db_dir = "/opt/snpEff/data/" + organism_name + "/"
-    String snpeff_config_path = "/opt/snpEff/snpEff.config"
-
-    Int cmd_mem_size_gb = mem_size_gb - 1
-
-    command {
-        # init database
-        echo "${organism_name}.genome : ${organism_name}" >> ${snpeff_config_path}
-        mkdir -p ${organism_db_dir}
-        mv ${ref} ${organism_db_dir}/sequences.fa
-        mv ${organism_gff} ${organism_db_dir}/genes.gff
-
-        # build db
-        java -jar ${snpeff_path} build -gff3 -v ${organism_name}
-
-        # run snpeff
-        java -Xmx${cmd_mem_size_gb}G -jar ${snpeff_path} \
-            -config ${snpeff_config_path} \
-            -formatEff -no-downstream -no-intergenic \
-            -no-upstream -no-utr -noStats \
-            -treatAllAsProteinCoding false \
-            ${organism_name} ${vcf} > ${output_vcf_name}
-
-        # gzip result
-        gzip ${output_vcf_name}
-    }
-
-    output {
-        File out = "${output_vcf_name}.gz"
-    }
-
-    runtime {
-        preemptible: 3
-        docker: docker
-        memory: mem_size_gb + " GB"
-        disks: "local-disk " + disk_size + " HDD"
-    }
 }
