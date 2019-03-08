@@ -1,6 +1,7 @@
 # Variant Calling pipeline for fungal haploid genomes
-# Developped by Xiao Li (xiaoli@broadinstitute.org) from Broad Fungal Genomics
-# Group, Infectious Disease and Microbiome Program.
+# Developed by Xiao Li (xiaoli@broadinstitute.org)
+# Fungal Genomics Group, Infectious Disease and Microbiome Program.
+# The Broad Institute of MIT and Harvard
 
 
 workflow GATK3_Germline_Variants {
@@ -42,17 +43,13 @@ workflow GATK3_Germline_Variants {
     String snp_filter_expr
     String indel_filter_expr
 
-    # snpeff
-    File organism_gff
-
-
     ## task calls
     # run pipeline on each sample, in parallel
     scatter(i in range(length(input_samples))) {
         String sample_name = input_samples[i]
         String input_bam = input_bams[i]
 
-        if ((length(sample) == 2) && do_align) {
+        if (do_align) {
             call SamToFastq {
                 input:
                 in_bam = input_bam,
@@ -181,22 +178,8 @@ workflow GATK3_Germline_Variants {
         disk_size = extra_large_disk_size
     }
 
-    # to do: genotype filtering step
-    if (do_snpeff) {
-        call SnpEff {
-            input:
-            ref = ref,
-            organism_gff = organism_gff,
-            output_vcf_name = "${run_name}.snpeff.vcf.gz",
-            vcf = HardFiltration.out,
-
-            mem_size_gb = extra_large_mem_size_gb,
-            disk_size = extra_large_disk_size
-        }
-    }
-
     output {
-        File gvcf = select_first([SnpEff.out, HardFiltration.out])
+        File gvcf = HardFiltration.out
     }
 }
 
