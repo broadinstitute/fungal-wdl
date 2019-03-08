@@ -3,7 +3,7 @@
 # export directory where cromwell and wdltool locate to JARS
 set -e
 
-WDL=workflows/gatk3_germline_snps_indels.wdl
+WDL=workflows/fungal_variant_calling_gatk3.wdl
 
 printf "##########\nBegin test\n##########\n"
 

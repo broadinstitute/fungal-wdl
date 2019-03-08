@@ -1,7 +1,8 @@
 {
     "GATK3_Germline_Variants.run_name": "cauris",
-    "GATK3_Germline_Variants.sample_paths_file": "tests/data/sample_path_file.tsv",
-    "GATK3_Germline_Variants.HaplotypeCaller.sample_name": "test",
+    "GATK3_Germline_Variants.input_samples": ["sample1", "sample2"],
+    "GATK3_Germline_Variants.input_bams": ["tests/data/ERR2299868p-bwamem.bam",
+                                           "tests/data/ERR2299869p-bwamem.bam"],
 
     "GATK3_Germline_Variants.med_disk_size": "20",
     "GATK3_Germline_Variants.large_disk_size": "20",
