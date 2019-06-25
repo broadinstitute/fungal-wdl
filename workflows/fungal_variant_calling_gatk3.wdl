@@ -3,6 +3,13 @@
 # Fungal Genomics Group, Infectious Disease and Microbiome Program.
 # The Broad Institute of MIT and Harvard
 
+# Verions of the software used in this WDL:
+#   PICARD_VER=1.782
+#   GATK37_VER=3.7-93-ge9d8068
+#   SAMTOOLS_VER=1.3.1
+#   BWA_VER=0.7.12
+#   TABIX_VER=0.2.5_r1005
+#   BGZIP_VER=1.3
 
 workflow GATK3_Germline_Variants {
     ## config params
