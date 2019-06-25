@@ -1,5 +1,7 @@
 # Analysis pipelines for fungal genomic analysis
-This repository contains GATK3 based variant calling pipelines used by the fungal genomic group at Infectious Disease and Microbiome Program (IDMP), the Broad Institute of MIT and harvard.
+This repository contains GATK3 based variant calling pipelines used by the Fungal Genomics group in the Infectious Disease and Microbiome Program, the Broad Institute of MIT and Harvard.
+
+The pipeline input is set of unaligned (or aligned) bam files and a reference genome. Reads are converted to fastq and aligned with BWA, alignments sorted and marked for duplicates with Picard, SNPs joint-called using GATK HaplotypeCaller, and hard filtration using GATK variant filtration. The output is a multi-sample VCF file.
 
 ## Synopsis
 * README.md: this file
