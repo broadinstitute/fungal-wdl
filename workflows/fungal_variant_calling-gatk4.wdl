@@ -8,11 +8,21 @@ workflow GATK4_Germline_Variants {
 
   # Config Parameters
 
-  String docker
+  String gatk_docker
+  String python2_docker
   String gatk_path
+  Int preemptible_general
+  Int preemptible_HC
 
   # Reference files
-
+  File ref
+  File dict
+  File amb
+  File ann
+  File bwt
+  File fai
+  File pac
+  File sa
 
   # Input Files
   Array[String] input_samples
@@ -22,11 +32,17 @@ workflow GATK4_Germline_Variants {
     String sample_name = input_samples[i]
     String input_bam = input_uBAMs[i]
 
+    #Document Tool
     call MarkIlluminaAdapters {
         input:
-
+          input_bam=input_bam
+          input_sample_name=sample_name
+          gatk_path=gatk_path
+          docker=docker
+          preemptible=preemptible_general
     }
 
+    #Document tool
     call SamToFastqAllignMerge {
       input:
 
@@ -79,17 +95,82 @@ workflow GATK4_Germline_Variants {
 ### Task Definitions ###
 
 task MarkIlluminaAdapters {
-  File
+  File input_bam
+  String input_sample_name
 
   String gatk_path
+  String docker
   Int mem_size_gb
+  Int preemptible
+  Int disk_size
+
 
   command {
-    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkIlluminaAdapters -I=/gsap/cdcfungal/WGS_pipelines/unaligned_bam_files/TestID-CA03_unaligned_read_pairs.bam -O=TestID-CA03_markilluminaadapters.bam -M=TestID-CA03_markilluminaadapters_metrics.txt
+    # e - exit when a command fails
+    # u - exit when script tries to use undeclared variables
+    # x - trace what gets executed
+    # o - exit status of the last command that threw a non-zero exit code is returned
+    set -euxo pipefail
+
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkIlluminaAdapters -I=${input_bam} -O=${input_sample_name}_markilluminaadapters.bam -M=${input_sample_name}_markilluminaadapters_metrics.txt
+
+  }
+
+  runtime {
+    preemptible: preemptible
+    docker: docker
+    memory: mem_size_gb + " GB"
+    disks: "local-disk "+ disk_size + " HDD"
+  }
+
+  output {
+    File bam = "${input_sample_name}_markilluminaadapters.bam"
+    File metrics_adapters = "${input_sample_name}_markilluminaadapters_metrics.txt"
+
+  }
+}
+
+
+task SamToFastqAllignMerge {
+  File input_bam
+  String input_sample_name
+
+  String docker
+  String gatk_path
+
+  Int disk_size
+  Int mem_size_gb
+  Int preemptible
+
+  File ref
+  File dict
+  File amb
+  File ann
+  File bwt
+  File fai
+  File pac
+  File sa
+
+  String read_group = "'@RG\\tID:FLOWCELL_${sample_name}\\tSM:${sample_name}\\tPL:ILLUMINA\\tLB:LIB_${sample_name}'"
+
+  command {
+    # e - exit when a command fails
+    # u - exit when script tries to use undeclared variables
+    # x - trace what gets executed
+    # o - exit status of the last command that threw a non-zero exit code is returned
+    set -euxo pipefail
+
+
+  }
+
+  runtime {
+
 
   }
 
   output {
 
   }
+
+
 }
