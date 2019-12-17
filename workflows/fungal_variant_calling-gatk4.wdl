@@ -160,6 +160,9 @@ task SamToFastqAllignMerge {
     # o - exit status of the last command that threw a non-zero exit code is returned
     set -euxo pipefail
 
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" SamToFastq -I=${input_bam} \
+    --FASTQ=/dev/stdout --CLIPPING_ATTRIBUTE=XT CLIPPING_ACTION=2 INTERLEAVE=true NON_PF=true | \
+    bwa mem -M -t 7 -p /path/Homo_sapiens_assembly19.fasta /dev/stdin
 
   }
 
