@@ -65,6 +65,7 @@ workflow GATK4_Germline_Variants {
         sa=sa
     }
 
+    #Document Tool
     call MarkDuplicates{
       input:
         input_sorted_bam=SamToFastqAllignMerge.bam
@@ -78,7 +79,18 @@ workflow GATK4_Germline_Variants {
     }
 
     call ReorderBam {
+      input:
+      input_bam=MarkDuplicates.bam
+      input_sample_name=sample_name
 
+      ref=ref
+      dict=dict
+
+      disk_size=general_disk_size
+      mem_size_gb=general_mem_size_gb
+      preemptible=preemptible
+      docker=gatk_docker
+      gatk_path=gatk_path
 
     }
 
@@ -115,6 +127,7 @@ workflow GATK4_Germline_Variants {
 
   }
 }
+
 
 
 ### Task Definitions ###
@@ -205,6 +218,7 @@ task SamToFastqAllignMerge {
   }
 }
 
+
 task MarkDuplicates {
   File input_sorted_bam
   String input_sample_name
@@ -224,6 +238,45 @@ task MarkDuplicates {
   output {
     File bam = "${input_sample_name}.marked_duplicates.bam"
     File metrics_duplicates = "${input_sample_name}.marked_duplicates.metrics"
+  }
+
+  runtime {
+    preemptible: preemptible
+    docker: docker
+    memory: mem_size_gb + " GB"
+    disks: "local-disk " + disk_size + " HDD"
+  }
+}
+
+
+task ReorderBam {
+  File input_bam
+  String input_sample_name
+
+  File ref
+  File dict
+
+  Int disk_size
+  Int mem_size_gb
+  Int preemptible
+  String docker
+  String gatk_path
+
+  Int cmd_mem_size_gb = mem_size_gb - 1
+
+  command {
+    # reorder bam
+    ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" ReorderSam \
+    -I=${input_bam} -O=${input_sample_name}.reordered.bam -SD=${ref}
+
+    # then index
+    ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" BuildBamIndex \
+    -I=${input_sample_name}.reordered.bam
+  }
+
+  output {
+    File bam = "${bam_prefix}.reordered.bam"
+    File bai = "${bam_prefix}.reordered.bai"
   }
 
   runtime {
