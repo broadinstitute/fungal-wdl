@@ -7,12 +7,13 @@
 workflow GATK4_Germline_Variants {
 
   # Config Parameters
-
   String gatk_docker
   String python2_docker
   String gatk_path
   Int preemptible_general
   Int preemptible_HC
+  Int general_disk_size
+  Int general_mem_size_gb
 
   # Reference files
   File ref
@@ -38,17 +39,41 @@ workflow GATK4_Germline_Variants {
           input_bam=input_bam
           input_sample_name=sample_name
           gatk_path=gatk_path
-          docker=docker
+          docker=gatk_docker
           preemptible=preemptible_general
+          disk_size=general_disk_size
+          mem_size_gb=general_mem_size_gb
     }
 
     #Document tool
     call SamToFastqAllignMerge {
       input:
+        input_bam=MarkIlluminaAdapters.bam
+        input_sample_name=sample_name
+        input_unmapped_bam=input_bam
+        gatk_path=gatk_path
+        docker=gatk_docker
+        preemptible=preemptible_general
 
+        ref=ref
+        dict=dict
+        amb=amb
+        ann=ann
+        bwt=bwt
+        fai=fai
+        pac=pac
+        sa=sa
     }
 
     call MarkDuplicates{
+      input:
+        input_sorted_bam=SamToFastqAllignMerge.bam
+        input_sample_name=sample_name
+        disk_size=general_disk_size
+        mem_size_gb=general_mem_size_gb
+        preemptible=preemptible_general
+        docker=gatk_docker
+        gatk_path=gatk_path
 
     }
 
@@ -112,8 +137,8 @@ task MarkIlluminaAdapters {
     # o - exit status of the last command that threw a non-zero exit code is returned
     set -euxo pipefail
 
-    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkIlluminaAdapters -I=${input_bam} -O=${input_sample_name}_markilluminaadapters.bam -M=${input_sample_name}_markilluminaadapters_metrics.txt
-
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkIlluminaAdapters -I=${input_bam} \
+    -O=${input_sample_name}_markilluminaadapters.bam -M=${input_sample_name}_markilluminaadapters_metrics.txt
   }
 
   runtime {
@@ -126,7 +151,6 @@ task MarkIlluminaAdapters {
   output {
     File bam = "${input_sample_name}_markilluminaadapters.bam"
     File metrics_adapters = "${input_sample_name}_markilluminaadapters_metrics.txt"
-
   }
 }
 
@@ -134,10 +158,10 @@ task MarkIlluminaAdapters {
 task SamToFastqAllignMerge {
   File input_bam
   String input_sample_name
+  File input_unmapped_bam
 
   String docker
   String gatk_path
-
   Int disk_size
   Int mem_size_gb
   Int preemptible
@@ -160,20 +184,52 @@ task SamToFastqAllignMerge {
     # o - exit status of the last command that threw a non-zero exit code is returned
     set -euxo pipefail
 
+    #Piped command containing SamToFastq | bwa mem | samtools view | MergeBamAlignment
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" SamToFastq -I=${input_bam} \
     --FASTQ=/dev/stdout --CLIPPING_ATTRIBUTE=XT CLIPPING_ACTION=2 INTERLEAVE=true NON_PF=true | \
-    bwa mem -M -t 7 -p /path/Homo_sapiens_assembly19.fasta /dev/stdin
-
+    bwa mem -M -R ${read_group} -p ${ref} /dev/stdin | samtools view -1 | \
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MergeBamAlignment \
+    -ALIGNED=/dev/stdin -UNMAPPED=${input_unmapped_bam} \
+    -O=${input_sample_name}.sorted.bam -R=${ref}
   }
 
   runtime {
-
-
+    preemptible: preemptible
+    docker: docker
+    memory: mem_size_gb + " GB"
+    disks: "local-disk "+ disk_size + " HDD"
   }
 
   output {
+    File bam=${input_sample_name}.sorted.bam
+  }
+}
 
+task MarkDuplicates {
+  File input_sorted_bam
+  String input_sample_name
+
+  Int disk_size
+  Int mem_size_gb
+  Int preemptible
+  String docker
+  String gatk_path
+
+  command {
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkDuplicates \
+    -I=${input_sorted_bam} -O=${input_sample_name}.marked_duplicates.bam \
+    -M=${input_sample_name}.marked_duplicates.metrics
   }
 
+  output {
+    File bam = "${input_sample_name}.marked_duplicates.bam"
+    File metrics_duplicates = "${input_sample_name}.marked_duplicates.metrics"
+  }
 
+  runtime {
+    preemptible: preemptible
+    docker: docker
+    memory: mem_size_gb + " GB"
+    disks: "local-disk " + disk_size + " HDD"
+  }
 }
