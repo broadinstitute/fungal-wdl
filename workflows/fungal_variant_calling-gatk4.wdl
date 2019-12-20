@@ -80,26 +80,33 @@ workflow GATK4_Germline_Variants {
 
     call ReorderBam {
       input:
-      input_bam=MarkDuplicates.bam
-      input_sample_name=sample_name
+        input_bam=MarkDuplicates.bam
+        input_sample_name=sample_name
 
-      ref=ref
-      dict=dict
+        ref=ref
+        dict=dict
 
-      disk_size=general_disk_size
-      mem_size_gb=general_mem_size_gb
-      preemptible=preemptible
-      docker=gatk_docker
-      gatk_path=gatk_path
-
+        disk_size=general_disk_size
+        mem_size_gb=general_mem_size_gb
+        preemptible=preemptible
+        docker=gatk_docker
+        gatk_path=gatk_path
     }
 
     call HaplotypeCaller {
+      input:
+        input_bam=ReorderBam.bam
+        input_bam_index=ReorderBam.bai
+        input_sample_name=sample_name
 
+        ref_dict=dict
+        ref=ref
+        ref_index=fai
 
+        preemptible=preemptible_HC
+        docker=gatk_docker
+        gatk_path=gatk_path
     }
-
-
   }
 
   call CombineGVCFs {
@@ -285,4 +292,40 @@ task ReorderBam {
     memory: mem_size_gb + " GB"
     disks: "local-disk " + disk_size + " HDD"
   }
+}
+
+task HaplotypeCaller {
+  File input_bam
+  File input_bam_index
+  String input_sample_name
+  String gvcf_name = "${input_sample_name}.g.vcf.gz"
+  String gvcf_index = "${input_sample_name}.g.vcf.gz.tbi"
+
+  File ref_dict
+  File ref
+  File ref_index
+
+  Int disk_size
+  Int mem_size_gb
+  Int preemptible
+  String docker
+  String gatk_path
+
+  command {
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" HaplotypeCaller \
+    -R ${ref} -I ${input_bam} -O ${gvcf_name} -ERC GVCF -ploidy 1
+  }
+
+  output {
+    File output_gvcf = "${gvcf_name}"
+    File output_gvcf_index = "${gvcf_index}"
+  }
+
+  runtime {
+  preemptible: preemptible
+  docker: docker
+  memory: mem_size_gb + " GB"
+  disks: "local-disk " + disk_size + " HDD"
+  }
+
 }
