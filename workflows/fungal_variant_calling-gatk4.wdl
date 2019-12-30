@@ -36,75 +36,75 @@ workflow GATK4_Germline_Variants {
     #Document Tool
     call MarkIlluminaAdapters {
         input:
-          input_bam=input_bam
-          input_sample_name=sample_name
-          gatk_path=gatk_path
-          docker=gatk_docker
-          preemptible=preemptible_general
-          disk_size=general_disk_size
+          input_bam=input_bam,
+          input_sample_name=sample_name,
+          gatk_path=gatk_path,
+          docker=gatk_docker,
+          preemptible=preemptible_general,
+          disk_size=general_disk_size,
           mem_size_gb=general_mem_size_gb
     }
 
     #Document tool
     call SamToFastqAllignMerge {
       input:
-        input_bam=MarkIlluminaAdapters.bam
-        input_sample_name=sample_name
-        input_unmapped_bam=input_bam
-        gatk_path=gatk_path
-        docker=gatk_docker
-        preemptible=preemptible_general
+        input_bam=MarkIlluminaAdapters.bam,
+        input_sample_name=sample_name,
+        input_unmapped_bam=input_bam,
+        gatk_path=gatk_path,
+        docker=gatk_docker,
+        preemptible=preemptible_general,
 
-        ref=ref
-        dict=dict
-        amb=amb
-        ann=ann
-        bwt=bwt
-        fai=fai
-        pac=pac
+        ref=ref,
+        dict=dict,
+        amb=amb,
+        ann=ann,
+        bwt=bwt,
+        fai=fai,
+        pac=pac,
         sa=sa
     }
 
     #Document Tool
     call MarkDuplicates{
       input:
-        input_sorted_bam=SamToFastqAllignMerge.bam
-        input_sample_name=sample_name
-        disk_size=general_disk_size
-        mem_size_gb=general_mem_size_gb
-        preemptible=preemptible_general
-        docker=gatk_docker
+        input_sorted_bam=SamToFastqAllignMerge.bam,
+        input_sample_name=sample_name,
+        disk_size=general_disk_size,
+        mem_size_gb=general_mem_size_gb,
+        preemptible=preemptible_general,
+        docker=gatk_docker,
         gatk_path=gatk_path
 
     }
 
     call ReorderBam {
       input:
-        input_bam=MarkDuplicates.bam
-        input_sample_name=sample_name
+        input_bam=MarkDuplicates.bam,
+        input_sample_name=sample_name,
 
-        ref=ref
-        dict=dict
+        ref=ref,
+        dict=dict,
 
-        disk_size=general_disk_size
-        mem_size_gb=general_mem_size_gb
-        preemptible=preemptible
-        docker=gatk_docker
+        disk_size=general_disk_size,
+        mem_size_gb=general_mem_size_gb,
+        preemptible=preemptible,
+        docker=gatk_docker,
         gatk_path=gatk_path
     }
 
     call HaplotypeCaller {
       input:
-        input_bam=ReorderBam.bam
-        input_bam_index=ReorderBam.bai
-        input_sample_name=sample_name
+        input_bam=ReorderBam.bam,
+        input_bam_index=ReorderBam.bai,
+        input_sample_name=sample_name,
 
-        ref_dict=dict
-        ref=ref
-        ref_index=fai
+        ref_dict=dict,
+        ref=ref,
+        ref_index=fai,
 
-        preemptible=preemptible_HC
-        docker=gatk_docker
+        preemptible=preemptible_HC,
+        docker=gatk_docker,
         gatk_path=gatk_path
     }
   }
@@ -121,7 +121,7 @@ workflow GATK4_Germline_Variants {
       docker = gatk_docker,
       gatk_path = gatk_path,
       mem_size_gb = general_mem_size_gb,
-      disk_size = general_disk_size
+      disk_size = general_disk_size,
       preemptible = preemptible
 
   }
@@ -138,7 +138,7 @@ workflow GATK4_Germline_Variants {
       docker = gatk_docker,
       gatk_path = gatk_path,
       mem_size_gb = general_mem_size_gb,
-      disk_size = general_disk_size
+      disk_size = general_disk_size,
       preemptible = preemptible
   }
 
@@ -152,9 +152,9 @@ workflow GATK4_Germline_Variants {
     vcf_index = GenotypeGVCFs.output_vcf_index_name,
     output_filename = "${run_name}.hard_filtered.vcf.gz",
 
-    preemptible = preemptible
+    preemptible = preemptible,
     docker = gatk_docker,
-    gatk_path = gatk_path,
+    gatk_path = gatk_path
 
   }
 
@@ -261,7 +261,7 @@ task SamToFastqAllignMerge {
   }
 
   output {
-    File bam=${input_sample_name}.sorted.bam
+    File bam="${input_sample_name}.sorted.bam"
   }
 }
 
@@ -497,8 +497,8 @@ task HardFiltration {
   }
 
   output {
-    File indels=indels_filtered.vcf.gz
-    File snps=snps_filtered.vcf.gz
+    File indels="indels_filtered.vcf.gz"
+    File snps="snps_filtered.vcf.gz"
     File all_filtered_variants="${output_filename}"
 
   }
