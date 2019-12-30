@@ -88,7 +88,7 @@ workflow GATK4_Germline_Variants {
 
         disk_size=general_disk_size,
         mem_size_gb=general_mem_size_gb,
-        preemptible=preemptible,
+        preemptible=preemptible_general,
         docker=gatk_docker,
         gatk_path=gatk_path
     }
@@ -122,7 +122,7 @@ workflow GATK4_Germline_Variants {
       gatk_path = gatk_path,
       mem_size_gb = general_mem_size_gb,
       disk_size = general_disk_size,
-      preemptible = preemptible
+      preemptible = preemptible_general
 
   }
 
@@ -139,7 +139,7 @@ workflow GATK4_Germline_Variants {
       gatk_path = gatk_path,
       mem_size_gb = general_mem_size_gb,
       disk_size = general_disk_size,
-      preemptible = preemptible
+      preemptible = preemptible_general
   }
 
   call HardFiltration {
@@ -152,7 +152,7 @@ workflow GATK4_Germline_Variants {
     vcf_index = GenotypeGVCFs.output_vcf_index_name,
     output_filename = "${run_name}.hard_filtered.vcf.gz",
 
-    preemptible = preemptible,
+    preemptible = preemptible_general,
     docker = gatk_docker,
     gatk_path = gatk_path
 
@@ -235,7 +235,7 @@ task SamToFastqAllignMerge {
   File pac
   File sa
 
-  String read_group = "'@RG\\tID:FLOWCELL_${sample_name}\\tSM:${sample_name}\\tPL:ILLUMINA\\tLB:LIB_${sample_name}'"
+  String read_group = "'@RG\\tID:FLOWCELL_${input_sample_name}\\tSM:${input_sample_name}\\tPL:ILLUMINA\\tLB:LIB_${input_sample_name}'"
 
   command {
     # e - exit when a command fails
@@ -322,8 +322,8 @@ task ReorderBam {
   }
 
   output {
-    File bam = "${bam_prefix}.reordered.bam"
-    File bai = "${bam_prefix}.reordered.bai"
+    File bam = "${input_sample_name}.reordered.bam"
+    File bai = "${input_sample_name}.reordered.bai"
   }
 
   runtime {
