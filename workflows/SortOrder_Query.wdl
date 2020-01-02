@@ -1,3 +1,9 @@
+# Query Sort BAMs
+# Helper workflow to query sort input unmapped BAMs into variant calling pipeline for fungal genomes.
+# Mantained by Aina Martinez Zurita (amartine@broadinstitute.org)
+# Fungal Genomics Group, Infectious Disease and Microbiome Program.
+# The Broad Institute of MIT and Harvard
+
 workflow sortSamWorkflow {
 	call sortSam
 }
