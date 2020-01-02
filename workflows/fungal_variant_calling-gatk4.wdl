@@ -246,7 +246,7 @@ task SamToFastqAllignMerge {
 
     #Piped command containing SamToFastq | bwa mem | samtools view | MergeBamAlignment
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" SamToFastq -I=${input_bam} \
-    --FASTQ=/dev/stdout --CLIPPING_ATTRIBUTE=XT CLIPPING_ACTION=2 INTERLEAVE=true NON_PF=true | \
+    --FASTQ=/dev/stdout  -CLIP_ATTR=XT  -CLIP_ACT=2  -INTER=true -NON_PF=true | \
     bwa mem -M -R ${read_group} -p ${ref} /dev/stdin | samtools view -1 | \
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MergeBamAlignment \
     -ALIGNED=/dev/stdin -UNMAPPED=${input_unmapped_bam} \
