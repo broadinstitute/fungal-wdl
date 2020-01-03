@@ -244,20 +244,20 @@ task SamToFastqAllignMerge {
     # o - exit status of the last command that threw a non-zero exit code is returned
     set -euxo pipefail
 
+    #We need to assign RG to all the unmapped reads
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" AddOrReplaceReadGroups \
+    -I=${input_unmapped_bam} -O=${input_sample_name}.readgroups_unmapped.bam -ID=FLOWCELL_${input_sample_name} \
+    -LB=LIB_${input_sample_name} -PL=ILLUMINA -SM=${input_sample_name} \
+    -PU=unit1
+
     #Piped command containing SamToFastq | bwa mem | samtools view | MergeBamAlignment
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" SamToFastq -I=${input_bam} \
     --FASTQ=/dev/stdout  -CLIP_ATTR=XT  -CLIP_ACT=2  -INTER=true -NON_PF=true | \
     bwa mem -M -R ${read_group} -p ${ref} /dev/stdin | samtools view -1 | \
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MergeBamAlignment \
-    -ALIGNED=/dev/stdin -UNMAPPED=${input_unmapped_bam} \
+    -ALIGNED=/dev/stdin -UNMAPPED=${input_sample_name}.readgroups_unmapped.bam \
     -O=${input_sample_name}.out1.bam -R=${ref}
-
-    #We need to assign RG to all the reads after MergeBamAlignment, since the unmapped reads will be re-added.
-    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" AddOrReplaceReadGroups \
-    -I=${input_sample_name}.out1.bam -O=${input_sample_name}.sorted.bam -ID=FLOWCELL_${input_sample_name} \
-    -LB=LIB_${input_sample_name} -PL=ILLUMINA -SM=${input_sample_name} \
-    -PU=unit1
-
+    
   }
 
   runtime {
