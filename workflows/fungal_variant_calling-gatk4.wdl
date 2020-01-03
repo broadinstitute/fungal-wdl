@@ -256,8 +256,8 @@ task SamToFastqAllignMerge {
     bwa mem -M -R ${read_group} -p ${ref} /dev/stdin | samtools view -1 | \
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MergeBamAlignment \
     -ALIGNED=/dev/stdin -UNMAPPED=${input_sample_name}.readgroups_unmapped.bam \
-    -O=${input_sample_name}.out1.bam -R=${ref}
-    
+    -O=${input_sample_name}.sorted.bam -R=${ref}
+
   }
 
   runtime {
