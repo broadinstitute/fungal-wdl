@@ -40,6 +40,16 @@ RUN cd /opt && \
     make install && \
     make clean
 
+#Install bcftools
+RUN cd /opt && \
+    wget -O bcftools-1.10.2.tar.bz2 'https://github.com/samtools/bcftools/releases/download/1.10.2/bcftools-1.10.2.tar.bz2'  && \
+    tar xf bcftools-1.10.2.tar.bz2 && \
+    rm bcftools-1.10.2.tar.bz2 && \
+    cd bcftools-1.10.2 && \
+    make && \
+    make install && \
+    make clean
+
 #Install BWA
 RUN cd /opt && \
     wget 'https://github.com/lh3/bwa/releases/download/v0.7.17/bwa-0.7.17.tar.bz2' -O bwa-0.7.17.tar.bz2 && \
