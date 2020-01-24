@@ -493,7 +493,7 @@ task HardFiltration {
     ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" VariantFiltration \
     -V snps.vcf.gz \
     -R ${ref} \
-    -filter "QD < 2.0" --filter-name "QD2" \
+    -filter "QD < 20.0" --filter-name "QD20" \
     -filter "QUAL < 30.0" --filter-name "QUAL30" \
     -filter "SOR > 3.0" --filter-name "SOR3" \
     -filter "FS > 60.0" --filter-name "FS60" \
@@ -503,7 +503,7 @@ task HardFiltration {
     ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" VariantFiltration \
     -V indels.vcf.gz \
     -R ${ref} \
-    -filter "QD < 2.0" --filter-name "QD2" \
+    -filter "QD < 20.0" --filter-name "QD20" \
     -filter "QUAL < 30.0" --filter-name "QUAL30" \
     -filter "FS > 200.0" --filter-name "FS200" \
     -O indels_filtered.vcf.gz
