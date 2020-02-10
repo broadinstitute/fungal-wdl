@@ -26,7 +26,6 @@ workflow GATK4_BAM_VariantCalling_Workflow {
   # Input Files
   String sample_name
   File input_bam
-  String run_name
 
   #Document Tool
   call MarkIlluminaAdapters {
@@ -104,14 +103,11 @@ workflow GATK4_BAM_VariantCalling_Workflow {
   }
 
   output {
-    File filtered_vcf=HardFiltration.all_filtered_variants
-    File filtered_snps=HardFiltration.snps
-    File filtered_indels=HardFiltration.indels
-    File costume_filtered_vcf=CostumeVCFFilter.vcf_filtered
-    File costume_filtered_stats=CostumeVCFFilter.vcf_filter_stats
+    File processed_bam=ReorderBam.bam
+    File processed_bai=ReorderBam.bai
 
-    Array[File] processed_bams=ReorderBam.bam
-    Array[File] processed_bais=ReorderBam.bai
+    File gvcf=HaplotypeCaller.output_gvcf
+    File gvcf_index=HaplotypeCaller.output_gvcf_index
   }
 
 }
