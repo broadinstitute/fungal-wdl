@@ -31,8 +31,8 @@ workflow GATK4_JointGenotyping_Workflow {
 
   call CombineGVCFs {
     input:
-      vcf_files = HaplotypeCaller.output_gvcf,
-      vcf_index_files = HaplotypeCaller.output_gvcf_index,
+      vcf_files = gvcf_files,
+      vcf_index_files = gvcf_index_files,
 
       ref = ref,
       ref_dict = dict,
