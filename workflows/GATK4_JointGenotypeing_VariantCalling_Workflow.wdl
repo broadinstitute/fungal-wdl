@@ -230,7 +230,7 @@ task HardFiltration {
     -R ${ref} \
     -I=snps_filtered.vcf.gz \
     -I=indels_filtered.vcf.gz \
-    -O=joined_variants.vcf.gz
+    -O=${output_filename}
 
   }
 
