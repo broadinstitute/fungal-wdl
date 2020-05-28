@@ -7,11 +7,11 @@
 ## - One analysis-ready BAM file for a single sample (as identified in RG:SM)
 ## - Set of variant calling intervals lists for the scatter, provided in a file
 ##
-## Outputs :
+## Outputs:
 ## - One GVCF file and its index
 ##
 ## Cromwell version support
-## - Successfully tested on v28
+## - Successfully tested on v28, v30 and v36
 ## - Does not work on versions < v23 due to output syntax
 ##
 ## Runtime parameters are optimized for Broad's Google Cloud Platform implementation.
