@@ -10,7 +10,9 @@ The pipeline input is set of unaligned (or aligned) BAM files and a reference ge
 * workflows: variant calling workflow. Note that `fungal_variant_calling_gatk3.wdl` is the full WDL, while `haplotype_caller_scatter_gatk3.wdl` is a module that the former uses.
 * Dockerfile: docker image for the workflow. The docker is also available from dockerhub [here](https://hub.docker.com/r/broadinstitute/fungi-gatk3).
 
-This method was deployed on Terra Method Repository [here](https://portal.firecloud.org/?return=firecloud#methods/broad-fungal-methods/funga-variant-call-gatk3/1). Example Terra workspace can be found [here](https://firecloud.terra.bio/#workspaces/broad-fungal-firecloud/broad-fungal-gatk3). 
+This method was deployed on Terra Method Repository [here](https://portal.firecloud.org/?return=firecloud#methods/broad-fungal-methods/funga-variant-call-gatk3/1). Example Terra workspace can be found [here](https://firecloud.terra.bio/#workspaces/broad-fungal-firecloud/broad-fungal-gatk3).
+
+A tutorial to customize the workspace and import your data could be found [here](https://github.com/broadinstitute/fungal-wdl/blob/master/gatk3/docs/external_tutorial.md). 
 
 ## Software versions
 ```sh
