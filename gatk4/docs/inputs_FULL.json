@@ -1,0 +1,29 @@
+{
+  "GATK4_Germline_Variants.HardFiltration.mem_size_gb":60,
+  "GATK4_Germline_Variants.HardFiltration.disk_size":100,
+  "GATK4_Germline_Variants.SamToFastqAllignMerge.mem_size_gb":15,
+  "GATK4_Germline_Variants.SamToFastqAllignMerge.disk_size":350,
+  "GATK4_Germline_Variants.general_mem_size_gb":15,
+  "GATK4_Germline_Variants.general_disk_size":100,
+  "GATK4_Germline_Variants.preemptible_general":3,
+  "GATK4_Germline_Variants.preemptible_HC":1,
+  "GATK4_Germline_Variants.HaplotypeCaller.disk_size":200,
+  "GATK4_Germline_Variants.HaplotypeCaller.mem_size_gb":30,
+
+  "GATK4_Germline_Variants.gatk_docker":"amartine/fungal_gatk4:latest",
+  "GATK4_Germline_Variants.gatk_path":"gatk",
+  "GATK4_Germline_Variants.python2_docker":"amartine/python_fungal:latest",
+  "GATK4_Germline_Variants.run_name":"write_name_here",
+
+  "GATK4_Germline_Variants.dict":"${workspace.b8441_ref_dict}",
+  "GATK4_Germline_Variants.ann":"${workspace.b8441_ref_ann}",
+  "GATK4_Germline_Variants.pac":"${workspace.b8441_ref_pac}",
+  "GATK4_Germline_Variants.ref":"${workspace.b8441_ref_fa}",
+  "GATK4_Germline_Variants.bwt":"${workspace.b8441_ref_bwt}",
+  "GATK4_Germline_Variants.fai":"${workspace.b8441_ref_index}",
+  "GATK4_Germline_Variants.sa":"${workspace.b8441_ref_sa}",
+  "GATK4_Germline_Variants.amb":"${workspace.b8441_ref_amb}",
+
+  "GATK4_Germline_Variants.input_samples":"${this.participants.participant_id}",
+  "GATK4_Germline_Variants.input_uBAMs":"${this.participants.bam_file}"
+}
