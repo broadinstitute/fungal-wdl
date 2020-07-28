@@ -184,6 +184,7 @@ workflow GATK4_Germline_Variants {
     File filtered_indels=HardFiltration.indels
     File costume_filtered_vcf=CostumeVCFFilter.vcf_filtered
     File costume_filtered_stats=CostumeVCFFilter.vcf_filter_stats
+    File multialelic_stats=CostumeVCFFilter.multialelic_stats
 
     Array[File] processed_bams=ReorderBam.bam
     Array[File] processed_bais=ReorderBam.bai

@@ -104,6 +104,7 @@ workflow GATK4_JointGenotyping_Workflow {
     File filtered_indels=HardFiltration.indels
     File costume_filtered_vcf=CostumeVCFFilter.vcf_filtered
     File costume_filtered_stats=CostumeVCFFilter.vcf_filter_stats
+    File multialelic_stats=CostumeVCFFilter.multialelic_stats
   }
 
 }
