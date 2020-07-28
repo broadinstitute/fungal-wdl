@@ -578,6 +578,7 @@ task CostumeVCFFilter {
   output {
     File vcf_filtered= "${output_filename}.filtered_SNPs_GQ50_AD08_DP10.vcf"
     File vcf_filter_stats= "${output_filename}.variant_qc_genotype_filter.tsv"
+    File multialelic_stats= "${vcf_file}.multiallelic.txt"
   }
 
   runtime {
