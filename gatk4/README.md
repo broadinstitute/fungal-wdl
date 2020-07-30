@@ -13,7 +13,7 @@ The pipeline input is set of unaligned bam files and a reference genome. Reads a
 ## Software versions
 ```sh
 PICARD_VER=2.21.2
-GATK37_VER=v4.1.4.1
+GATK4_VER=v4.1.4.1
 SAMTOOLS_VER=1.1
 BWA_VER=0.7.12
 ```
@@ -27,4 +27,4 @@ There are two possible options to run the pipeline.
 ## About
 This pipeline is developed by Aina Martinez Zurita, after the original GATK3 pipeline by Xiao Li from IDMP, the Broad Institute. Use `issues` tag to report any bugs.
 
-This software is under MIT license.
+This software is under BSD III license.
