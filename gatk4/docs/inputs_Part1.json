@@ -1,0 +1,25 @@
+{
+  "GATK4_BAM_VariantCalling_Workflow.general_disk_size":100,
+  "GATK4_BAM_VariantCalling_Workflow.general_mem_size_gb":15,
+  "GATK4_BAM_VariantCalling_Workflow.preemptible_general":3,
+  "GATK4_BAM_VariantCalling_Workflow.preemptible_HC":1,
+  "GATK4_BAM_VariantCalling_Workflow.HaplotypeCaller.disk_size":200,
+  "GATK4_BAM_VariantCalling_Workflow.HaplotypeCaller.mem_size_gb":30,
+  "GATK4_BAM_VariantCalling_Workflow.SamToFastqAllignMerge.disk_size":350,
+  "GATK4_BAM_VariantCalling_Workflow.SamToFastqAllignMerge.mem_size_gb":15,
+
+  "GATK4_BAM_VariantCalling_Workflow.gatk_docker":"amartine/fungal_gatk4:latest",
+  "GATK4_BAM_VariantCalling_Workflow.gatk_path":"gatk",
+
+  "GATK4_BAM_VariantCalling_Workflow.sa":"${workspace.b8441_ref_sa}",
+  "GATK4_BAM_VariantCalling_Workflow.fai":"${workspace.b8441_ref_index}",
+  "GATK4_BAM_VariantCalling_Workflow.bwt":"${workspace.b8441_ref_bwt}",
+  "GATK4_BAM_VariantCalling_Workflow.dict":"${workspace.b8441_ref_dict}",
+  "GATK4_BAM_VariantCalling_Workflow.pac":"${workspace.b8441_ref_pac}",
+  "GATK4_BAM_VariantCalling_Workflow.ref":"${workspace.b8441_ref_fa}",
+  "GATK4_BAM_VariantCalling_Workflow.ann":"${workspace.b8441_ref_ann}",
+  "GATK4_BAM_VariantCalling_Workflow.amb":"${workspace.b8441_ref_amb}",
+
+  "GATK4_BAM_VariantCalling_Workflow.sample_name":"${this.name}",
+  "GATK4_BAM_VariantCalling_Workflow.input_bam":"${this.bams}"
+}
