@@ -1,0 +1,3 @@
+entity:participant_id	bam_file
+ERR2299868p	gs://broad_fungal_data_sets/candida_auris_global/ERR2299868p-bwamem.bam
+ERR2299869p	gs://broad_fungal_data_sets/candida_auris_global/ERR2299869p-bwamem.bam
