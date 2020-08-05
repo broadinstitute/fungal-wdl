@@ -5,6 +5,7 @@ Each directory in this repository corresponds to a workflow. Workflows are writt
 
 ## Workflow synopsis
 * [gatk3](gatk3/README.md): GATK3 fungal variant calling workflow
+* [gatk4](gatk4/README.md): GATK4 fungal variant calling workflow
 
 ## About
 This repo is developed and maintained by Fungal Genomics Group, IDMP, Broad Institute. Use `issues` tag to report any bugs.
