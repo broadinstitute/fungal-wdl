@@ -84,7 +84,7 @@ Copy that file into the server using gsutil.
 
 Go to the command line and copy this combined VCF:
 ```
-use .google-cloud-sdk-20160101
+use .google-cloud-sdk
 gsutil cp gs://fc-secure-f76aaa59-a5c8-42e5-8ec4-db44ad254b33/8cf8a219-f855-4e93-b0c9-89795dc6d37d/GATK3_Germline_Variants/5bec624a-afb8-4f69-9682-58b1cd790cea/call-HardFiltration/Cand_hae.hard_filtered.vcf.gz /my_path/
 ```
 
