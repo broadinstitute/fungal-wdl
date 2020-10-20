@@ -213,8 +213,8 @@ task MarkIlluminaAdapters {
     # o - exit status of the last command that threw a non-zero exit code is returned
     set -euxo pipefail
 
-    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkIlluminaAdapters -I=${input_bam} \
-    -O=${input_sample_name}_markilluminaadapters.bam -M=${input_sample_name}_markilluminaadapters_metrics.txt
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkIlluminaAdapters -I ${input_bam} \
+    -O ${input_sample_name}_markilluminaadapters.bam -M ${input_sample_name}_markilluminaadapters_metrics.txt
   }
 
   runtime {
@@ -262,17 +262,17 @@ task SamToFastqAllignMerge {
 
     #We need to assign RG to all the unmapped reads
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" AddOrReplaceReadGroups \
-    -I=${input_unmapped_bam} -O=${input_sample_name}.readgroups_unmapped.bam -ID=FLOWCELL_${input_sample_name} \
-    -LB=LIB_${input_sample_name} -PL=ILLUMINA -SM=${input_sample_name} \
-    -PU=unit1
+    -I ${input_unmapped_bam} -O ${input_sample_name}.readgroups_unmapped.bam -ID FLOWCELL_${input_sample_name} \
+    -LB LIB_${input_sample_name} -PL ILLUMINA -SM ${input_sample_name} \
+    -PU unit1
 
     #Piped command containing SamToFastq | bwa mem | samtools view | MergeBamAlignment
-    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" SamToFastq -I=${input_bam} \
-    --FASTQ=/dev/stdout  -CLIP_ATTR=XT  -CLIP_ACT=2  -INTER=true -NON_PF=true | \
+    ${gatk_path} --java-options "-Xmx${mem_size_gb}G" SamToFastq -I ${input_bam} \
+    --FASTQ /dev/stdout  -CLIP_ATTR XT  -CLIP_ACT 2  -INTER true -NON_PF true | \
     bwa mem -M -R ${read_group} -p ${ref} /dev/stdin | samtools view -1 | \
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MergeBamAlignment \
-    -ALIGNED=/dev/stdin -UNMAPPED=${input_sample_name}.readgroups_unmapped.bam \
-    -O=${input_sample_name}.sorted.bam -R=${ref}
+    -ALIGNED /dev/stdin -UNMAPPED ${input_sample_name}.readgroups_unmapped.bam \
+    -O ${input_sample_name}.sorted.bam -R ${ref}
 
   }
 
@@ -301,8 +301,8 @@ task MarkDuplicates {
 
   command {
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" MarkDuplicates \
-    -I=${input_sorted_bam} -O=${input_sample_name}.marked_duplicates.bam \
-    -M=${input_sample_name}.marked_duplicates.metrics
+    -I ${input_sorted_bam} -O ${input_sample_name}.marked_duplicates.bam \
+    -M ${input_sample_name}.marked_duplicates.metrics
   }
 
   output {
@@ -337,11 +337,11 @@ task ReorderBam {
   command {
     # reorder bam
     ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" ReorderSam \
-    -I=${input_bam} -O=${input_sample_name}.reordered.bam -SD=${ref}
+    -I ${input_bam} -O ${input_sample_name}.reordered.bam -SD ${ref}
 
     # then index
     ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" BuildBamIndex \
-    -I=${input_sample_name}.reordered.bam
+    -I ${input_sample_name}.reordered.bam
   }
 
   output {
@@ -513,9 +513,9 @@ task HardFiltration {
     # is sorted.
     ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" MergeVcfs \
     -R ${ref} \
-    -I=snps_filtered.vcf.gz \
-    -I=indels_filtered.vcf.gz \
-    -O=${output_filename}
+    -I snps_filtered.vcf.gz \
+    -I indels_filtered.vcf.gz \
+    -O ${output_filename}
 
   }
 

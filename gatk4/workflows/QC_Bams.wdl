@@ -26,6 +26,7 @@ workflow GATK4_BAM_QC_Tasks {
   String sample_name
   File input_bam
   File input_fai
+  File interval_file
 
 
   call CollectMultipleMetrics {
@@ -50,6 +51,7 @@ workflow GATK4_BAM_QC_Tasks {
       input_bam=input_bam,
       input_bam_index=input_fai,
       input_sample_name=sample_name,
+      interval_file=interval_file,
 
       ref_dict=dict,
       ref=ref,
@@ -110,6 +112,7 @@ task DepthOfCoverage {
   File input_bam
   File input_bam_index
   String input_sample_name
+  File interval_file
 
   File ref_dict
   File ref
@@ -123,7 +126,7 @@ task DepthOfCoverage {
 
   command {
     ${gatk_path} --java-options "-Xmx${mem_size_gb}G" DepthOfCoverage \
-    -R ${ref} -I ${input_bam} -O ${input_sample_name}
+    -R ${ref} -I ${input_bam} -O ${input_sample_name} -L ${interval_file}
   }
 
   output {
