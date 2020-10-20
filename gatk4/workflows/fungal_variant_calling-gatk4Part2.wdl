@@ -229,9 +229,9 @@ task HardFiltration {
     # is sorted.
     ${gatk_path} --java-options "-Xmx${cmd_mem_size_gb}G" MergeVcfs \
     -R ${ref} \
-    -I=snps_filtered.vcf.gz \
-    -I=indels_filtered.vcf.gz \
-    -O=${output_filename}
+    -I snps_filtered.vcf.gz \
+    -I indels_filtered.vcf.gz \
+    -O ${output_filename}
 
   }
 

@@ -61,8 +61,8 @@ ENV PATH /opt/bwa-0.7.17:$PATH
 
 #Install GATK4
 RUN cd /opt && \
-    wget 'https://github.com/broadinstitute/gatk/releases/download/4.1.4.1/gatk-4.1.4.1.zip' -O gatk-4.1.4.1.zip && \
-    unzip gatk-4.1.4.1.zip && \
-    rm gatk-4.1.4.1.zip
+    wget 'https://github.com/broadinstitute/gatk/releases/download/4.1.8.1/gatk-4.1.8.1.zip' -O gatk-4.1.8.1.zip && \
+    unzip gatk-4.1.8.1.zip && \
+    rm gatk-4.1.8.1.zip
 
-ENV PATH /opt/gatk-4.1.4.1:$PATH
+ENV PATH /opt/gatk-4.1.8.1:$PATH
