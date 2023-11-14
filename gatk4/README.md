@@ -7,7 +7,7 @@ The pipeline input is set of unaligned bam files and a reference genome. Reads a
 * README.md: this file
 * docs: Tutorial, and example input files and variables.
 * workflows: variant calling workflow. See Workflows for description of all the possible workflow options, and the best practices.
-* Dockerfiles: docker image for the workflow, as well as the python docker image use in the custom filtering step.
+* Dockerfiles: docker image for the workflow, as well as the python docker image use in the custom filtering step. Docker hub links to the two images are: [GATK4](https://hub.docker.com/r/broadinstitute/fungal_gatk4) and [Python](https://hub.docker.com/r/broadinstitute/python_fungal).
 * LICENSE: MIT license
 
 ## Software versions
