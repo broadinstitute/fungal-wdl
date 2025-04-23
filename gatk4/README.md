@@ -21,7 +21,7 @@ BWA_VER=0.7.12
 ## Workflows
 
 There are two possible options to run the pipeline.
-1. Run the whole pipeline in one go: Run `fungal_variant_calling-gatk4FULL` on a participant set.
+1. Run the whole pipeline in one go: Run `fungal_variant_calling-gatk4FULL` on a participant set. (For diploid genomes, the fungal-variant-call-gatk4-diploid.3.wdl can be used).
 2. Run the pipeline in two steps: First, run the `fungal_variant_calling-gatk4Part1` on individual participants to call variants using HaplotypeCaller. Then, form a participant set and produce a joint called vcf with `fungal_variant_calling-gatk4Part2`. This allows samples to added to joint-calls at a later date without having to run the computationally intensive HaplotypeCaller step on the whole set again.
 
 ## About
